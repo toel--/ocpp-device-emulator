@@ -25,24 +25,11 @@ public class Main implements EventListenerIF {
      * @param args the command line arguments
      */
     public static void main(String[] args) throws URISyntaxException {
-        
-        boolean ferroamp = false;
-        
-        String deviceId = "01234567899876543210"; //"91738A48W4015325";
-        String url = "ws://127.0.0.1:8443/ocpp";
-        
-        if (ferroamp) {
-            deviceId = "91738A48W4015325";
-            url = "ws://10.0.1.220:9000";            
-        }
-        
-        /*
-        
+                
         if (args.length<2) showSyntaxAndExit();
         
         String deviceId = args[0];
         String url = args[1];
-        */
         
         Dev.debugEnabled(true);
         Dev.setWriteToFile(true);

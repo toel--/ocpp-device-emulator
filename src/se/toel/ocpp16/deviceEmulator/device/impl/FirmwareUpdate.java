@@ -163,9 +163,9 @@ public class FirmwareUpdate {
      * @return the status
      */
     public boolean getStatusHasChanged() {
-        boolean originalStatus = statusHasChanged;
+        boolean changed = statusHasChanged;
         statusHasChanged = false;
-        return originalStatus;
+        return changed;
     }
         
     public String getVersion() {

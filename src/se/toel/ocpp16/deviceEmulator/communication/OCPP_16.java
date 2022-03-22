@@ -1,10 +1,12 @@
 package se.toel.ocpp16.deviceEmulator.communication;
 
 import java.net.URI;
+import java.util.Iterator;
 import org.java_websocket.client.WebSocketClient;
 import org.java_websocket.handshake.ServerHandshake;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import se.toel.util.Dev;
 
 
 /**
@@ -43,6 +45,11 @@ public class OCPP_16 extends WebSocketClient {
 
     @Override
     public void onOpen(ServerHandshake handshake) {
+        Iterator<String> it = handshake.iterateHttpFields();
+        while (it.hasNext()) {
+            String key = it.next();
+            Dev.info("   "+key+" "+handshake.getFieldValue(key));
+        }
         callback.onOpen(handshake);
     }
 

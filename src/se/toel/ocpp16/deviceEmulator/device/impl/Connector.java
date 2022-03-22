@@ -22,15 +22,17 @@ public class Connector extends DataMap {
     private final int id;
     
     private final String 
+            CHARGING_CURRENT = "chargingCurrent",
+            ERROR_CODE = "errorCode",
             ID_TAG = "idTag",
             METER_WH = "meterWh",
             RESERVATION_ID = "reservationId",
             TRANSACTION_ID = "transactionId",
             STATUS = "status",
-            CHARGING_CURRENT = "chargingCurrent";
+            VENDOR_ERROR_CODE = "vendorErrorCode";
     
     public String stopReason = StopReason_Local;
-    public String lastStatus = STATUS_AVAILABLE;
+    public String lastStatus = STATUS_UNAVAILABLE;
     private JSONObject txDefaultProfile = null;
     private JSONObject txProfile = null;
     
@@ -66,6 +68,8 @@ public class Connector extends DataMap {
         this.id = id;
         set(STATUS, STATUS_AVAILABLE);
         set(CHARGING_CURRENT, "16");
+        set(ERROR_CODE, "NoError");
+        set(VENDOR_ERROR_CODE, "");
         load(storePath+"/connector_"+id+".dat");
     }
     
@@ -120,6 +124,20 @@ public class Connector extends DataMap {
         _set(CHARGING_CURRENT, current);
     }
     
+    public String getErrorCode() {
+        return get(ERROR_CODE);
+    }
+    public void setErrorCode(String errorCode) {
+        set(ERROR_CODE, errorCode);
+    }
+    
+    public String getVendorErrorCode() {
+        return get(VENDOR_ERROR_CODE);
+    }
+    public void setVendorErrorCode(String errorCode) {
+        set(VENDOR_ERROR_CODE, errorCode);
+    }
+    
     
     public void reset() {
      
@@ -127,6 +145,7 @@ public class Connector extends DataMap {
         _set(RESERVATION_ID, 0);
         _set(TRANSACTION_ID, 0);
         set(STATUS, STATUS_AVAILABLE);
+        set(ERROR_CODE, "NoError");
         stopReason = StopReason_Local;
         
     }

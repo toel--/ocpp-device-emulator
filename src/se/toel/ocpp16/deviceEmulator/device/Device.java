@@ -54,7 +54,7 @@ public class Device {
     private final Map<Long, String> scheduled = new ConcurrentHashMap<>();
     private final JSONObject jsonStatusAccepted = new JSONObject("{\"status\": \"Accepted\"}"); 
     private final JSONObject jsonStatusRejected = new JSONObject("{\"status\": \"Rejected\"}");
-    private final JSONObject jsonStatusNotSupported = new JSONObject("{\"status\": \"Not Supported\"}");
+    private final JSONObject jsonStatusNotSupported = new JSONObject("{\"status\": \"NotSupported\"}");
     private final JSONObject jsonStatusNotImplemented = new JSONObject("{\"status\": \"NotImplemented\"}");
     private final JSONObject jsonStatusUnknown = new JSONObject("{\"status\": \"Unknown\"}");
     // private final DataMap coreProfile = new DataMap();
@@ -225,14 +225,14 @@ public class Device {
             req.put("status", "Available");
         } else {
             // and this about a specific connector
-            req.put("connectorId", connector.getId());                                  // Required. The id of the connector for which the status is reported. Id '0' (zero) is used if the status is for the Charge Point main controller.
-            req.put("errorCode", "NoError");                                            // Required. This contains the error code reported by the Charge Point.
-            // req.put("info", null);                                                   // Optional. Additional free format information related to the error.
-            req.put("status", connector.getStatus());                                   // Required. This contains the current status of the Charge Point.
+            req.put("connectorId", connector.getId());                                                                                                          // Required. The id of the connector for which the status is reported. Id '0' (zero) is used if the status is for the Charge Point main controller.
+            req.put("errorCode", connector.getErrorCode());                                                                                                     // Required. This contains the error code reported by the Charge Point.
+            // req.put("info", null);                                                                                                                           // Optional. Additional free format information related to the error.
+            req.put("status", connector.getStatus());                                                                                                           // Required. This contains the current status of the Charge Point.
 
-            // req.put("timestamp", DateTimeUtil.toIso8601(now));                       // Optional. The time for which the status is reported. If absent time of receipt of the message will be assumed.
-            // req.put("vendorId", null);                                               // Optional. This identifies the vendor-specific implementation.
-            // req.put("vendorErrorCode", null);                                        // Optional. This contains the vendor-specific error code.
+            // req.put("timestamp", DateTimeUtil.toIso8601(now));                                                                                               // Optional. The time for which the status is reported. If absent time of receipt of the message will be assumed.
+            // req.put("vendorId", null);                                                                                                                       // Optional. This identifies the vendor-specific implementation.
+            if (!connector.getVendorErrorCode().isEmpty()) req.put("vendorErrorCode", connector.getVendorErrorCode());                                          // Optional. This contains the vendor-specific error code.
         }
             
         String msgId = Long.toHexString(now);
@@ -242,9 +242,10 @@ public class Device {
         if (json==null) {
             return false;
         }
-        JSONObject obj = json.getJSONObject(2);
         
-        return (json.getInt(0)==3);
+        boolean ok = json.getInt(0)==3;
+        
+        return ok;
         
     }
     
@@ -331,16 +332,18 @@ public class Device {
         if (isConnected && !busy) {
 
             // If connector status has changed, send 
-            for (Connector connector : connectors) {
-                 if (!connector.getStatus().equals(connector.lastStatus)) {
-                     doStatusNotification(connector);
-                     // If we were charging, send a last MeterValues
-                     if (Connector.STATUS_CHARGING.equals(connector.lastStatus)) {
-                         if (config.getMeterValueSampleInterval()>0) {
-                             doMeterValues(connector);
+            if (bootNotificationSent) {
+                for (Connector connector : connectors) {
+                     if (!connector.getStatus().equals(connector.lastStatus)) {
+                         doStatusNotification(connector);
+                         // If we were charging, send a last MeterValues
+                         if (Connector.STATUS_CHARGING.equals(connector.lastStatus)) {
+                             if (config.getMeterValueSampleInterval()>0) {
+                                 doMeterValues(connector);
+                             }
                          }
-                     }
-                     connector.lastStatus=connector.getStatus();
+                         connector.lastStatus=connector.getStatus();
+                    }
                 }
             }
             
@@ -486,6 +489,8 @@ public class Device {
     
     private void sendConf(String id, JSONObject payload) {
                 
+        // Dev.sleep((int)(Math.random()*1000));
+        
         JSONArray msg = new JSONArray();
         msg.put(3);
         msg.put(id);
@@ -606,7 +611,7 @@ public class Device {
         // if (stackLevel>0) Dev.info("   Need to clear the charging profiles with stack level "+stackLevel);
         
         if (connectorId>0) {
-            Connector connector = connectors.get(connectorId-1);
+            Connector connector = connectors.get(connectorId);
             success = connector.clearChargingProfile(chargingProfilePurpose, id, stackLevel);
         } else {
             for (Connector connector : connectors) {
@@ -639,7 +644,7 @@ public class Device {
             return;
         }
         
-        Connector connector = connectors.get(connectorId-1);
+        Connector connector = connectors.get(connectorId);
         if (connector.getTransactionId()>0) {
             // We have a transaction allready
             sendConf(msgId, jsonStatusRejected);
@@ -682,7 +687,7 @@ public class Device {
         String idTag = params.getString("idTag");
         JSONObject chargingProfile = params.optJSONObject("chargingProfile");
         
-        Connector connector = connectors.get(connectorId-1);
+        Connector connector = connectors.get(connectorId);
         
         // Send the request to the Central System
         long now = System.currentTimeMillis();
@@ -838,7 +843,7 @@ public class Device {
         int connectorId = json.optInt("connectorId", 1);
         JSONObject csChargingProfiles = json.getJSONObject("csChargingProfiles");
         
-        Connector connector = connectors.get(connectorId-1);
+        Connector connector = connectors.get(connectorId);
         boolean success = connector.setChargingProfile(csChargingProfiles);
         
         if (success) {
@@ -887,7 +892,8 @@ public class Device {
     
     private void doUpdateFirmware(String msgId, JSONObject json) {
      
-        // 
+        // Just dont answer or do anything
+        if (false) {
         
         ongoingFirmwareUpdate = new FirmwareUpdate();
         
@@ -901,7 +907,7 @@ public class Device {
         JSONObject payload = new JSONObject();
         sendConf(msgId, payload);
         
-        
+        }
         
     }
     
@@ -956,6 +962,15 @@ public class Device {
         boolean success = true;
         String key = json.getString("key");
         String value = json.getString("value");
+        
+        // Special case for the echo, used for tests
+        if (key.equals("echo")) {
+            JSONObject ans = new JSONObject();
+            ans.put("status", value);
+            sendConf(msgId, ans);
+            if ("Accepted,RebootRequired".contains(value)) config.set(key, value);
+            return;
+        }
         
         config.set(key, value);
         
@@ -1107,7 +1122,7 @@ public class Device {
     
     private void createConnectors(int count, String storePath) {
         
-        for (int i=1; i<=count; i++) {
+        for (int i=0; i<=count; i++) {
             connectors.add(new Connector(i, storePath));
         }
         
@@ -1130,9 +1145,9 @@ public class Device {
                     ongoingFirmwareUpdate.startInstallFirmware();
                     break;
                 case FirmwareUpdate.FIRMWARE_STATUS_INSTALLING:
-                    ongoingFirmwareUpdate.setStatus(FirmwareUpdate.FIRMWARE_STATUS_INSTALLED);
-                    break;
-                case FirmwareUpdate.FIRMWARE_STATUS_INSTALLED:
+                    // ongoingFirmwareUpdate.setStatus(FirmwareUpdate.FIRMWARE_STATUS_INSTALLED);
+                    // break;
+                // case FirmwareUpdate.FIRMWARE_STATUS_INSTALLED:
                     deviceData.setFirmwareVersion(ongoingFirmwareUpdate.getVersion());
                     bootNotificationSent = false;
                     stop();

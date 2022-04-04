@@ -870,7 +870,7 @@ public class Device {
         boolean uploaded = false;
         File file = new File("console.log");
         if (file.exists()) {
-            File diagfile = new File("test_diagnostics.txt");
+            File diagfile = new File("files/test_diagnostics.txt");
             FileUtils.copy(file, diagfile, true);
             if (FTP.sendFile(location, diagfile)) {
                 payload.put("fileName", diagfile.getName());

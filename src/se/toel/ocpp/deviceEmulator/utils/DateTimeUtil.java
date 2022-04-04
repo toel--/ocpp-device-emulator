@@ -2,7 +2,7 @@
  * DateTimeUtil class to convert to / from UTC date time
  */
 
-package se.toel.ocpp16.deviceEmulator.utils;
+package se.toel.ocpp.deviceEmulator.utils;
 
 import java.text.SimpleDateFormat;
 import java.time.ZonedDateTime;

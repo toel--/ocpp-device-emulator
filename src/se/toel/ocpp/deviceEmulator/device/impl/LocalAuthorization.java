@@ -6,7 +6,7 @@ The Authorization Cache and Local Authorization List are distinct logical data s
 Where both Authorization Cache and Local Authorization List are supported, a Charge Point SHALL treat Local Authorization List entries as having priority over Authorization Cache entries for the same identifiers.
 
  */
-package se.toel.ocpp16.deviceEmulator.device.impl;
+package se.toel.ocpp.deviceEmulator.device.impl;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;

@@ -4,7 +4,7 @@
  * and open the template in the editor.
  */
 
-package se.toel.ocpp16.deviceEmulator.utils;
+package se.toel.ocpp.deviceEmulator.utils;
 
 import it.sauronsoftware.ftp4j.FTPClient;
 import java.io.File;

@@ -2,12 +2,12 @@
  * Connector class
  */
 
-package se.toel.ocpp16.deviceEmulator.device.impl;
+package se.toel.ocpp.deviceEmulator.device.impl;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
 import se.toel.collection.DataMap;
-import se.toel.ocpp16.deviceEmulator.utils.DateTimeUtil;
+import se.toel.ocpp.deviceEmulator.utils.DateTimeUtil;
 
 /**
  *

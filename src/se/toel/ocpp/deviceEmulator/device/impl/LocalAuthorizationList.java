@@ -4,7 +4,7 @@
  * and open the template in the editor.
  */
 
-package se.toel.ocpp16.deviceEmulator.device.impl;
+package se.toel.ocpp.deviceEmulator.device.impl;
 
 import se.toel.collection.DataMap;
 

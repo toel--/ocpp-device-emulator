@@ -2,10 +2,10 @@
  * Class to emulate a firmware update
  */
 
-package se.toel.ocpp16.deviceEmulator.device.impl;
+package se.toel.ocpp.deviceEmulator.device.impl;
 
 import java.io.File;
-import se.toel.ocpp16.deviceEmulator.utils.FTP;
+import se.toel.ocpp.deviceEmulator.utils.FTP;
 import se.toel.util.Dev;
 import se.toel.util.FileUtils;
 import se.toel.util.StringUtil;

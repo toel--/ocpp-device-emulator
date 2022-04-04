@@ -3,7 +3,6 @@
  */
 package se.toel.ocpp.deviceEmulator.utils;
 
-import se.toel.ocpp16.deviceEmulator.utils.DateTimeUtil;
 import org.junit.Test;
 import static org.junit.Assert.*;
 

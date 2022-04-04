@@ -1,7 +1,7 @@
 /*
  * Using https://github.com/TooTallNate/Java-WebSocket
  */
-package se.toel.ocpp16.deviceEmulator;
+package se.toel.ocpp.deviceEmulator;
 
 import java.net.URISyntaxException;
 import java.util.HashMap;
@@ -9,7 +9,7 @@ import java.util.Map;
 import org.json.JSONObject;
 import se.toel.event.EventIF;
 import se.toel.event.EventListenerIF;
-import se.toel.ocpp16.deviceEmulator.device.Device;
+import se.toel.ocpp.deviceEmulator.device.Device;
 import se.toel.util.Dev;
 
 /**
@@ -26,21 +26,22 @@ public class Main implements EventListenerIF {
      */
     public static void main(String[] args) throws URISyntaxException {
                 
-        if (args.length<2) showSyntaxAndExit();
+        if (args.length<3) showSyntaxAndExit();
         
         String deviceId = args[0];
         String url = args[1];
+        String ocppVersion = args[2];
         
         Dev.debugEnabled(true);
         Dev.setWriteToFile(true);
         
-        Main main = new Main(deviceId, url);
+        Main main = new Main(deviceId, url, ocppVersion);
         System.exit(0);
         
     }
     
     
-    public Main(String deviceId, String url) {
+    public Main(String deviceId, String url, String ocppVersion) {
         
         // Shutdown hook
         Runtime.getRuntime().addShutdownHook( new Thread (  )  {  
@@ -53,7 +54,7 @@ public class Main implements EventListenerIF {
         
         try {
         
-            Device device = new Device(deviceId, url);
+            Device device = new Device(deviceId, url, ocppVersion);
             devices.put(deviceId, device);
             device.start();
             
@@ -85,8 +86,7 @@ public class Main implements EventListenerIF {
         
         JSONObject json = new JSONObject(event.getMessage());
         String operation = json.getString("op");
-        
-        
+                
         
     }
     
@@ -97,10 +97,11 @@ public class Main implements EventListenerIF {
         System.out.println("Toel Hartmann 2022");
         System.out.println();
         System.out.println("  Syntax:");
-        System.out.println("     java -jar OcppDeviceEmulator.jar [deviceId] [url]");
+        System.out.println("     java -jar OcppDeviceEmulator.jar [deviceId] [url] [ocppVersion]");
         System.out.println("  where");
         System.out.println("     [deviceId] is the device id to use");
         System.out.println("     [url] is the url of the backend server endpoint");
+        System.out.println("     [ocppVersion] the OCPP version to use (only ocpp1.6 is supported for now)");
         System.exit(1);
         
     }

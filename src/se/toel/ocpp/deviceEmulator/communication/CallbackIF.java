@@ -2,7 +2,7 @@
  * Callback Interface
  */
 
-package se.toel.ocpp16.deviceEmulator.communication;
+package se.toel.ocpp.deviceEmulator.communication;
 
 import org.java_websocket.handshake.ServerHandshake;
 

@@ -1,4 +1,4 @@
-package se.toel.ocpp16.deviceEmulator.communication;
+package se.toel.ocpp.deviceEmulator.communication;
 
 import java.net.URI;
 import java.util.Iterator;
@@ -13,18 +13,18 @@ import se.toel.util.Dev;
  *
  * @author toel
  */
-public class OCPP_16 extends WebSocketClient {
+public class WebSocket extends WebSocketClient {
 
     /***************************************************************************
      * Constants and variables
      **************************************************************************/
-    private final Logger log = LoggerFactory.getLogger(OCPP_16.class);
+    private final Logger log = LoggerFactory.getLogger(WebSocket.class);
     private CallbackIF callback;
 
      /***************************************************************************
      * Constructor
      **************************************************************************/
-    public OCPP_16(URI uri) {
+    public WebSocket(URI uri) {
         super(uri);
     }
 

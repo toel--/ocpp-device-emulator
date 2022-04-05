@@ -6,8 +6,6 @@ package se.toel.ocpp.deviceEmulator.communication;
 import java.net.URI;
 import org.json.JSONArray;
 import org.json.JSONObject;
-import se.toel.ocpp.deviceEmulator.communication.CallbackIF;
-import se.toel.ocpp.deviceEmulator.communication.WebSocket;
 import se.toel.util.Dev;
 
 /**
@@ -19,14 +17,8 @@ public class Ocpp16 extends OcppCommon implements OcppIF {
     /***************************************************************************
      * Constants and variables
      **************************************************************************/
-    private boolean isConnected = false;
     private final CallbackIF callback;
     
-    private final JSONObject jsonStatusAccepted = new JSONObject("{\"status\": \"Accepted\"}"); 
-    private final JSONObject jsonStatusRejected = new JSONObject("{\"status\": \"Rejected\"}");
-    private final JSONObject jsonStatusNotSupported = new JSONObject("{\"status\": \"NotSupported\"}");
-    private final JSONObject jsonStatusNotImplemented = new JSONObject("{\"status\": \"NotImplemented\"}");
-    private final JSONObject jsonStatusUnknown = new JSONObject("{\"status\": \"Unknown\"}");
     
     /***************************************************************************
      * Constructor
@@ -53,12 +45,12 @@ public class Ocpp16 extends OcppCommon implements OcppIF {
                 websocket.addHeader("Sec-WebSocket-Protocol", "ocpp1.6");
                 websocket.connect();
                 int timeout = 100;
-                while (--timeout > 0 && !isConnected) {
+                while (--timeout > 0 && !websocket.isOpen()) {
                     Dev.sleep(10);
                 }
             }
 
-            if (isConnected) {
+            if (websocket.isOpen()) {
                 echo("  success");
             } else {
                 echo("  failure");
@@ -78,7 +70,7 @@ public class Ocpp16 extends OcppCommon implements OcppIF {
         try {
             websocket.close();
             int timeout = 100;
-            while (--timeout>0 && isConnected) Dev.sleep(10);
+            while (--timeout>0 && !websocket.isClosed()) Dev.sleep(10);
         } finally {
             busy = false;
         }

@@ -389,7 +389,7 @@ public class Device {
         if (isConnected) {
             switch (command) {
 
-                case BOOT_NOTIFICATION: doBootNotification(); break;
+                case BOOT_NOTIFICATION: doStartTransaction(new JSONObject("{\"connectorId\":1,\"idTag\":\"1\",\"meterStart\":4.2949560603999968E9,\"timestamp\":\"2022-04-05T08:08:00.421\"}")); // doBootNotification(); break;
                 case AUTHORIZE: doAuthorize(); break;
                 case START_TRANSACTION: doStartTransaction(json); break;
                 case STOP_TRANSACTION: doStopTransaction(json); break;

@@ -208,15 +208,90 @@ public class Connector extends DataMap {
         JSONObject meterValue = new JSONObject();           // Required. The sampled meter values with timestamps.
         meterValue.put("timestamp", DateTimeUtil.toIso8601(System.currentTimeMillis()));
         JSONArray sampledValues = new JSONArray();
+        
+        double voltage = 230.1;
+        
         JSONObject sampledValue = new JSONObject();
-        sampledValue.put("value", Math.round(getMeterWh()));            // Send rounded values for Wh
-        sampledValue.put("context", "Sample.Periodic");
+        sampledValue.put("context", "Sample.Periodic");                 // Should be Trigger on trigger message
         sampledValue.put("format", "Raw");
         sampledValue.put("measurand", "Energy.Active.Import.Register");
-        sampledValue.put("phase", "L1_L2");
+        sampledValue.put("value", Math.round(getMeterWh()));            // Send rounded values for Wh
         sampledValue.put("location", "Outlet");
         sampledValue.put("unit", "Wh");
         sampledValues.put(sampledValue);
+        
+        sampledValue = new JSONObject();
+        sampledValue.put("context", "Sample.Periodic");                 // Should be Trigger on trigger message
+        // sampledValue.put("format", "Raw");
+        sampledValue.put("measurand", "Power.Active.Import");
+        sampledValue.put("value", Math.round(getChargingCurrent()*voltage));            // Send rounded values for W
+        sampledValue.put("location", "Outlet");
+        sampledValue.put("unit", "W");
+        sampledValues.put(sampledValue);
+        
+        sampledValue = new JSONObject();
+        sampledValue.put("context", "Sample.Periodic");                 // Should be Trigger on trigger message
+        // sampledValue.put("format", "Raw");
+        sampledValue.put("measurand", "Power.Active.Import");
+        sampledValue.put("value", Math.round(getChargingCurrent()*voltage));            // Send rounded values for W
+        sampledValue.put("location", "Outlet");
+        sampledValue.put("unit", "W");
+        sampledValues.put(sampledValue);
+        
+        sampledValue = new JSONObject();
+        sampledValue.put("context", "Sample.Periodic");                 // Should be Trigger on trigger message
+        sampledValue.put("measurand", "Current.Import");
+        sampledValue.put("value", getChargingCurrent()/3);
+        sampledValue.put("location", "Outlet");
+        sampledValue.put("phase", "L1");
+        sampledValue.put("unit", "A");
+        sampledValues.put(sampledValue);
+        
+        sampledValue = new JSONObject();
+        sampledValue.put("context", "Sample.Periodic");                 // Should be Trigger on trigger message
+        sampledValue.put("measurand", "Current.Import");
+        sampledValue.put("value", getChargingCurrent()/3);
+        sampledValue.put("location", "Outlet");
+        sampledValue.put("phase", "L2");
+        sampledValue.put("unit", "A");
+        sampledValues.put(sampledValue);
+        
+        sampledValue = new JSONObject();
+        sampledValue.put("context", "Sample.Periodic");                 // Should be Trigger on trigger message
+        sampledValue.put("measurand", "Current.Import");
+        sampledValue.put("value", getChargingCurrent()/3);
+        sampledValue.put("location", "Outlet");
+        sampledValue.put("phase", "L3");
+        sampledValue.put("unit", "A");
+        sampledValues.put(sampledValue);
+                        
+        sampledValue = new JSONObject();
+        sampledValue.put("context", "Sample.Periodic");                 // Should be Trigger on trigger message
+        sampledValue.put("measurand", "Voltage");
+        sampledValue.put("value", String.valueOf(voltage));
+        sampledValue.put("location", "Outlet");
+        sampledValue.put("phase", "L1");
+        sampledValue.put("unit", "V");
+        sampledValues.put(sampledValue);
+        
+        sampledValue = new JSONObject();
+        sampledValue.put("context", "Sample.Periodic");                 // Should be Trigger on trigger message
+        sampledValue.put("measurand", "Voltage");
+        sampledValue.put("value", String.valueOf(voltage));
+        sampledValue.put("location", "Outlet");
+        sampledValue.put("phase", "L2");
+        sampledValue.put("unit", "V");
+        sampledValues.put(sampledValue);
+        
+        sampledValue = new JSONObject();
+        sampledValue.put("context", "Sample.Periodic");                 // Should be Trigger on trigger message
+        sampledValue.put("measurand", "Voltage");
+        sampledValue.put("value", String.valueOf(voltage));
+        sampledValue.put("location", "Outlet");
+        sampledValue.put("phase", "L3");
+        sampledValue.put("unit", "V");
+        sampledValues.put(sampledValue);
+        
         meterValue.put("sampledValue", sampledValues);
         meterValues.put(meterValue);
         

@@ -4,7 +4,6 @@
  */
 package se.toel.ocpp.deviceEmulator.communication;
 
-import org.json.JSONArray;
 import org.json.JSONObject;
 
 /**
@@ -13,7 +12,7 @@ import org.json.JSONObject;
  */
 public interface OcppIF {
     
-    public boolean connect();
+    public boolean connect(String AuthorizationKey);
     public boolean disconnect();
     public void sendReq(String id, String message, JSONObject payload);
     public void sendConf(String id, JSONObject payload);

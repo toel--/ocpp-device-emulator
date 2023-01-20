@@ -45,11 +45,6 @@ public class WebSocket extends WebSocketClient {
 
     @Override
     public void onOpen(ServerHandshake handshake) {
-        Iterator<String> it = handshake.iterateHttpFields();
-        while (it.hasNext()) {
-            String key = it.next();
-            Dev.info("   "+key+" "+handshake.getFieldValue(key));
-        }
         callback.onOpen(handshake);
     }
 

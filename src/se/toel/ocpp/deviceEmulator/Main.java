@@ -4,91 +4,53 @@
 package se.toel.ocpp.deviceEmulator;
 
 import java.net.URISyntaxException;
-import java.util.HashMap;
-import java.util.Map;
-import org.json.JSONObject;
-import se.toel.event.EventIF;
-import se.toel.event.EventListenerIF;
-import se.toel.ocpp.deviceEmulator.device.Device;
+import se.toel.ocpp.deviceEmulator.modes.ApplicationModeIF;
+import se.toel.ocpp.deviceEmulator.modes.DeviceEmulator;
+import se.toel.ocpp.deviceEmulator.modes.DeviceTester;
+import se.toel.ocpp.deviceEmulator.modes.DeviceWatcher;
 import se.toel.util.Dev;
 
 /**
  *
  * @author toel
  */
-public class Main implements EventListenerIF {
-
-    private boolean running = true;
-    private Map<String, Device> devices = new HashMap<>();
+public class Main {
     
     /**
      * @param args the command line arguments
      */
     public static void main(String[] args) throws URISyntaxException {
                 
-        if (args.length<3) showSyntaxAndExit();
+        ApplicationModeIF mode;
         
+        if (args.length<1) showSyntaxAndExit();
         String deviceId = args[0];
-        String url = args[1];
-        String ocppVersion = args[2];
         
-        Dev.debugEnabled(true);
-        Dev.setWriteToFile(true);
+        switch (deviceId) {
+            case "watcher":
+                mode = new DeviceWatcher();
+                break;
+            case "tester":
+                mode = new DeviceTester();
+                break;
+            default:
+                if (args.length<3) showSyntaxAndExit();
+                String url = args[1];
+                String ocppVersion = args[2];
+                mode = new DeviceEmulator(deviceId, url, ocppVersion); 
+            
+        }
         
-        Main main = new Main(deviceId, url, ocppVersion);
+        mode.start();
+                
+        while (mode.isRunning()) Dev.sleep(1000);
+        
         System.exit(0);
         
     }
     
     
-    public Main(String deviceId, String url, String ocppVersion) {
-        
-        // Shutdown hook
-        Runtime.getRuntime().addShutdownHook( new Thread (  )  {  
-            @Override
-            public void run() {
-                shutdown();
-            }
-        }); 
-        
-        
-        try {
-        
-            Device device = new Device(deviceId, url, ocppVersion);
-            devices.put(deviceId, device);
-            device.start();
-            
-            while (running) {
-                Thread.sleep(100);
-            }
-                        
-            device.shutdown();            
-        
-        } catch (Exception e) {
-            e.printStackTrace(System.err);
-            System.exit(1);
-        }
     
-    }
-    
-    
-    
-    
-    public void shutdown() {
-        
-        running = false;
-        
-    }
-    
-
-    @Override
-    public void eventTriggered(EventIF event) {
-        
-        JSONObject json = new JSONObject(event.getMessage());
-        String operation = json.getString("op");
-                
-        
-    }
     
     
     private static void showSyntaxAndExit() {
@@ -100,6 +62,7 @@ public class Main implements EventListenerIF {
         System.out.println("     java -jar OcppDeviceEmulator.jar [deviceId] [url] [ocppVersion]");
         System.out.println("  where");
         System.out.println("     [deviceId] is the device id to use");
+        System.out.println("                'watcher' to enable the watcher mode, see documentation for configuration");
         System.out.println("     [url] is the url of the backend server endpoint");
         System.out.println("     [ocppVersion] the OCPP version to use (only ocpp1.6 is supported for now)");
         System.exit(1);

@@ -4,8 +4,13 @@
 package se.toel.ocpp.deviceEmulator.communication;
 
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 import org.json.JSONArray;
 import org.json.JSONObject;
+import se.toel.ocpp.deviceEmulator.events.Event;
+import se.toel.ocpp.deviceEmulator.events.EventHandler;
+import se.toel.ocpp.deviceEmulator.events.EventIds;
 import se.toel.util.Dev;
 
 /**
@@ -18,31 +23,43 @@ public class Ocpp16 extends OcppCommon implements OcppIF {
      * Constants and variables
      **************************************************************************/
     private final CallbackIF callback;
-    
+    EventHandler eventMgr = null;
     
     /***************************************************************************
      * Constructor
      **************************************************************************/
-    public Ocpp16(String id, String url, CallbackIF callback) {
-        super(id, url);
+    public Ocpp16(String deviceId, String url, CallbackIF callback) {
+        super(deviceId, url);
         this.callback = callback;
+        eventMgr = EventHandler.getInstance();
     }
 
     /***************************************************************************
      * Public methods
      **************************************************************************/
     @Override
-    public boolean connect() {
+    public boolean connect(String authorizationKey) {
+        
         busy = true;
         
         try {
-            echo("connecting...");
+            
+            eventMgr.trigger(EventIds.INFO, deviceId, "connecting...");
             URI uri = getBackendUri();
-            Dev.info("Connecting using " + uri);
+            
+            eventMgr.trigger(EventIds.CONNECTING, deviceId, "Connecting using " + uri);
             websocket = new WebSocket(uri);
+            websocket.setConnectionLostTimeout(60);
+            
             websocket.registerCallback(callback);
             if (!websocket.isOpen()) {
-                websocket.addHeader("Sec-WebSocket-Protocol", "ocpp1.6");
+                
+                websocket.addHeader("Sec-WebSocket-Protocol", "ocpp1.6");                
+                if (authorizationKey!=null) {
+                    String auth = deviceId+":"+ fromHex(authorizationKey);
+                    auth = "Basic "+Base64.getEncoder().encodeToString(auth.getBytes(StandardCharsets.UTF_8));
+                    websocket.addHeader("Authorization", auth);
+                }
                 websocket.connect();
                 int timeout = 100;
                 while (--timeout > 0 && !websocket.isOpen()) {
@@ -51,9 +68,9 @@ public class Ocpp16 extends OcppCommon implements OcppIF {
             }
 
             if (websocket.isOpen()) {
-                echo("  success");
+                eventMgr.trigger(EventIds.CONNECTED, deviceId, "  success");
             } else {
-                echo("  failure");
+                eventMgr.trigger(EventIds.CONNECTION_FAILED, deviceId, "  failure");
             }
         } finally {
             busy = false;
@@ -67,6 +84,8 @@ public class Ocpp16 extends OcppCommon implements OcppIF {
         
         busy = true;
         
+        eventMgr.trigger(EventIds.INFO, deviceId, "disconnecting...");
+        
         try {
             websocket.close();
             int timeout = 100;
@@ -75,7 +94,14 @@ public class Ocpp16 extends OcppCommon implements OcppIF {
             busy = false;
         }
         
-        return websocket.isClosed();
+        boolean success = websocket.isClosed();
+        if (success) {
+            eventMgr.trigger(EventIds.INFO, deviceId, "disconnected!");
+        } else {
+            eventMgr.trigger(EventIds.INFO, deviceId, "disconnection failed!");
+        }
+        
+        return success;
     }
     
     
@@ -89,23 +115,21 @@ public class Ocpp16 extends OcppCommon implements OcppIF {
         msg.put(payload);
         String s = msg.toString();
         
-        echo("S: "+s);
+        eventMgr.trigger(new Event(EventIds.OCPP_SENDING, deviceId, s));
         websocket.send(s);
         
     }
     
     @Override
     public void sendConf(String id, JSONObject payload) {
-                
-        // Dev.sleep((int)(Math.random()*1000));
-        
+                        
         JSONArray msg = new JSONArray();
         msg.put(3);
         msg.put(id);
         msg.put(payload);
         String s = msg.toString();
         
-        echo("S: "+s);
+        eventMgr.trigger(new Event(EventIds.OCPP_SENDING, deviceId, s));
         websocket.send(s);
         
     }

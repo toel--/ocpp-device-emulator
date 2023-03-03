@@ -18,7 +18,8 @@ public class DeviceData extends DataMap {
     private final String 
             CHARGE_POINT_MODEL = "charge_point_model",
             CHARGE_POINT_VENDOR = "charge_point_vendor",
-            FIRMWARE_VERSION = "firmware_version";
+            FIRMWARE_VERSION = "firmware_version",
+            BASIC_AUTH_ENABLED = "basic_auth_enabled";
 
      /***************************************************************************
      * Constructor
@@ -28,7 +29,7 @@ public class DeviceData extends DataMap {
      * Public methods
      **************************************************************************/
     public String getModel() {
-        return opt(CHARGE_POINT_MODEL, "Njord Go");
+        return optString(CHARGE_POINT_MODEL, "Njord Go");
     }
     
     public void setModel(String model) {
@@ -36,7 +37,7 @@ public class DeviceData extends DataMap {
     }
     
     public String getVendor() {
-        return opt(CHARGE_POINT_VENDOR, "vendor");
+        return optString(CHARGE_POINT_VENDOR, "vendor");
     }
     
     public void setVendor(String vendor) {
@@ -44,11 +45,19 @@ public class DeviceData extends DataMap {
     }
     
     public String getFirmwareVersion() {
-        return opt(FIRMWARE_VERSION, "0.0.1");
+        return optString(FIRMWARE_VERSION, "0.0.1");
     }
     
     public void setFirmwareVersion(String firmware) {
         set(FIRMWARE_VERSION, firmware);
+    }
+    
+    public boolean getBasicAuthEnabled() {
+        return optBoolean(BASIC_AUTH_ENABLED, false);
+    }
+    
+    public void setBasicAuthEnabled(boolean basicAuthEnabled) {
+        setBoolean(BASIC_AUTH_ENABLED, basicAuthEnabled);
     }
 
     /***************************************************************************

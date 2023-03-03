@@ -25,7 +25,7 @@ public abstract class OcppCommon {
     private boolean isConnected = false;
     protected final boolean echo = true;
     protected boolean stdoutneednewline = false;  
-    protected final String id;
+    protected final String deviceId;
     protected final String url;
     
     
@@ -34,8 +34,8 @@ public abstract class OcppCommon {
      /***************************************************************************
      * Constructor
      **************************************************************************/
-    public OcppCommon(String id, String url) {
-        this.id = id;
+    public OcppCommon(String deviceId, String url) {
+        this.deviceId = deviceId;
         this.url = url;
     }
 
@@ -46,24 +46,26 @@ public abstract class OcppCommon {
     /***************************************************************************
      * Protected methods
      **************************************************************************/
-    protected void echo(String s) {
-        if (echo) {
-            if (stdoutneednewline) System.out.println("");
-            Dev.info(s);
-            stdoutneednewline=false;
-        }
-    }
-    
+        
     protected URI getBackendUri() {
         URI uri = null;
         try {
-            uri = new URI(url+"/"+id);
+            uri = new URI(url+"/"+deviceId);
         } catch (URISyntaxException e) {
             log.error("While creating backend URI", e);
         }
         return uri;
     }
     
+    protected String fromHex(String s) {
+        int len = s.length();
+        byte[] data = new byte[len / 2];
+        for (int i = 0; i < len; i += 2) {
+            data[i / 2] = (byte) ((Character.digit(s.charAt(i), 16) << 4)
+                    + Character.digit(s.charAt(i+1), 16));
+        }
+        return new String(data);
+    }
     
     
     

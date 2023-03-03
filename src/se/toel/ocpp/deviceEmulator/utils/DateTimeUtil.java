@@ -30,8 +30,17 @@ public class DateTimeUtil {
     public static String toIso8601(long timestamp) {
      
         Date date = new Date(timestamp);
-        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS");
-        sdf.setTimeZone(TimeZone.getTimeZone("GMT"));
+        SimpleDateFormat sdf;
+        
+        boolean useUTC = true;
+        
+        if (useUTC) {
+            sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS"); // 2022-06-09T06:40:11.123
+            sdf.setTimeZone(TimeZone.getTimeZone("GMT"));
+        } else {
+            sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ"); // 2022-06-09T06:40:11.123+05:30
+        }
+                
         return sdf.format(date);
         
     }
@@ -44,7 +53,7 @@ public class DateTimeUtil {
         
         SimpleDateFormat sdf;
         if (s.contains("Z")) {
-            sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
+            sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
         } else {
             sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS");
         }

@@ -29,7 +29,8 @@ public class Connector extends DataMap {
             RESERVATION_ID = "reservationId",
             TRANSACTION_ID = "transactionId",
             STATUS = "status",
-            VENDOR_ERROR_CODE = "vendorErrorCode";
+            VENDOR_ERROR_CODE = "vendorErrorCode",
+            PLUGGED_IN = "pluggedIn";
     
     public String stopReason = StopReason_Local;
     public String lastStatus = STATUS_UNAVAILABLE;
@@ -66,11 +67,11 @@ public class Connector extends DataMap {
      **************************************************************************/
     public Connector(int id, String storePath) {
         this.id = id;
-        set(STATUS, STATUS_AVAILABLE);
         set(CHARGING_CURRENT, "16");
         set(ERROR_CODE, "NoError");
         set(VENDOR_ERROR_CODE, "");
         load(storePath+"/connector_"+id+".dat");
+        set(STATUS, STATUS_UNAVAILABLE);                    // Force the first status to be "unavailable": it will be recomputed later
     }
     
 
@@ -100,6 +101,7 @@ public class Connector extends DataMap {
         return _getInt(TRANSACTION_ID);
     }
     public void setTransactionId(int id) {
+        // Dev.info("Connector.setTransactionId("+id+")");
         _set(TRANSACTION_ID, id);
     }
     
@@ -138,17 +140,26 @@ public class Connector extends DataMap {
         set(VENDOR_ERROR_CODE, errorCode);
     }
     
-    
+    public boolean isPluggedIn() {
+        return getBoolean(PLUGGED_IN);
+    }
+    public void setPluggedIn(boolean pluggedIn) {
+        setBoolean(PLUGGED_IN, pluggedIn);
+    }
+        
     public void reset() {
      
         _set(ID_TAG, "");
         _set(RESERVATION_ID, 0);
         _set(TRANSACTION_ID, 0);
-        set(STATUS, STATUS_AVAILABLE);
+        set(STATUS, STATUS_UNAVAILABLE);
         set(ERROR_CODE, "NoError");
         stopReason = StopReason_Local;
         
     }
+    
+    
+    
     
     public boolean setChargingProfile(JSONObject csChargingProfiles) {
         
@@ -208,15 +219,90 @@ public class Connector extends DataMap {
         JSONObject meterValue = new JSONObject();           // Required. The sampled meter values with timestamps.
         meterValue.put("timestamp", DateTimeUtil.toIso8601(System.currentTimeMillis()));
         JSONArray sampledValues = new JSONArray();
+        
+        double voltage = 230.1;
+        
         JSONObject sampledValue = new JSONObject();
-        sampledValue.put("value", Math.round(getMeterWh()));            // Send rounded values for Wh
-        sampledValue.put("context", "Sample.Periodic");
+        sampledValue.put("context", "Sample.Periodic");                 // Should be Trigger on trigger message
         sampledValue.put("format", "Raw");
         sampledValue.put("measurand", "Energy.Active.Import.Register");
-        sampledValue.put("phase", "L1_L2");
+        sampledValue.put("value", Math.round(getMeterWh()));            // Send rounded values for Wh
         sampledValue.put("location", "Outlet");
         sampledValue.put("unit", "Wh");
         sampledValues.put(sampledValue);
+        
+        sampledValue = new JSONObject();
+        sampledValue.put("context", "Sample.Periodic");                 // Should be Trigger on trigger message
+        // sampledValue.put("format", "Raw");
+        sampledValue.put("measurand", "Power.Active.Import");
+        sampledValue.put("value", Math.round(getChargingCurrent()*voltage));            // Send rounded values for W
+        sampledValue.put("location", "Outlet");
+        sampledValue.put("unit", "W");
+        sampledValues.put(sampledValue);
+        
+        sampledValue = new JSONObject();
+        sampledValue.put("context", "Sample.Periodic");                 // Should be Trigger on trigger message
+        // sampledValue.put("format", "Raw");
+        sampledValue.put("measurand", "Power.Active.Import");
+        sampledValue.put("value", Math.round(getChargingCurrent()*voltage));            // Send rounded values for W
+        sampledValue.put("location", "Outlet");
+        sampledValue.put("unit", "W");
+        sampledValues.put(sampledValue);
+        
+        sampledValue = new JSONObject();
+        sampledValue.put("context", "Sample.Periodic");                 // Should be Trigger on trigger message
+        sampledValue.put("measurand", "Current.Import");
+        sampledValue.put("value", getChargingCurrent()/3);
+        sampledValue.put("location", "Outlet");
+        sampledValue.put("phase", "L1");
+        sampledValue.put("unit", "A");
+        sampledValues.put(sampledValue);
+        
+        sampledValue = new JSONObject();
+        sampledValue.put("context", "Sample.Periodic");                 // Should be Trigger on trigger message
+        sampledValue.put("measurand", "Current.Import");
+        sampledValue.put("value", getChargingCurrent()/3);
+        sampledValue.put("location", "Outlet");
+        sampledValue.put("phase", "L2");
+        sampledValue.put("unit", "A");
+        sampledValues.put(sampledValue);
+        
+        sampledValue = new JSONObject();
+        sampledValue.put("context", "Sample.Periodic");                 // Should be Trigger on trigger message
+        sampledValue.put("measurand", "Current.Import");
+        sampledValue.put("value", getChargingCurrent()/3);
+        sampledValue.put("location", "Outlet");
+        sampledValue.put("phase", "L3");
+        sampledValue.put("unit", "A");
+        sampledValues.put(sampledValue);
+                        
+        sampledValue = new JSONObject();
+        sampledValue.put("context", "Sample.Periodic");                 // Should be Trigger on trigger message
+        sampledValue.put("measurand", "Voltage");
+        sampledValue.put("value", String.valueOf(voltage));
+        sampledValue.put("location", "Outlet");
+        sampledValue.put("phase", "L1");
+        sampledValue.put("unit", "V");
+        sampledValues.put(sampledValue);
+        
+        sampledValue = new JSONObject();
+        sampledValue.put("context", "Sample.Periodic");                 // Should be Trigger on trigger message
+        sampledValue.put("measurand", "Voltage");
+        sampledValue.put("value", String.valueOf(voltage));
+        sampledValue.put("location", "Outlet");
+        sampledValue.put("phase", "L2");
+        sampledValue.put("unit", "V");
+        sampledValues.put(sampledValue);
+        
+        sampledValue = new JSONObject();
+        sampledValue.put("context", "Sample.Periodic");                 // Should be Trigger on trigger message
+        sampledValue.put("measurand", "Voltage");
+        sampledValue.put("value", String.valueOf(voltage));
+        sampledValue.put("location", "Outlet");
+        sampledValue.put("phase", "L3");
+        sampledValue.put("unit", "V");
+        sampledValues.put(sampledValue);
+        
         meterValue.put("sampledValue", sampledValues);
         meterValues.put(meterValue);
         
@@ -254,7 +340,15 @@ public class Connector extends DataMap {
         
        JSONObject chargingSchedule = csChargingProfiles.getJSONObject("chargingSchedule");
        JSONObject chargingSchedulePeriod = chargingSchedule.getJSONArray("chargingSchedulePeriod").getJSONObject(0);
-       setChargingCurrent(chargingSchedulePeriod.getDouble("limit"));
+       
+       double current = chargingSchedulePeriod.getDouble("limit");
+       setChargingCurrent(current);
+       
+       switch (getStatus()) {
+           case STATUS_SUSPENDEDEVSE: if (current>0) setStatus(STATUS_CHARGING); break;
+           case STATUS_CHARGING: if (current<6) setStatus(STATUS_SUSPENDEDEVSE); break;
+       }
+       
        
     }
        

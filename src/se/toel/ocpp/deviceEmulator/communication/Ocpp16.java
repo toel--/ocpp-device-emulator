@@ -8,8 +8,8 @@ import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import org.json.JSONArray;
 import org.json.JSONObject;
-import se.toel.event.EventHandler;
 import se.toel.ocpp.deviceEmulator.events.Event;
+import se.toel.ocpp.deviceEmulator.events.EventHandler;
 import se.toel.ocpp.deviceEmulator.events.EventIds;
 import se.toel.util.Dev;
 
@@ -44,10 +44,10 @@ public class Ocpp16 extends OcppCommon implements OcppIF {
         
         try {
             
-            eventMgr.trigger(EventIds.INFO, "connecting...");
+            eventMgr.trigger(EventIds.INFO, deviceId, "connecting...");
             URI uri = getBackendUri();
             
-            eventMgr.trigger(EventIds.CONNECTING, "Connecting using " + uri);
+            eventMgr.trigger(EventIds.CONNECTING, deviceId, "Connecting using " + uri);
             websocket = new WebSocket(uri);
             websocket.setConnectionLostTimeout(60);
             
@@ -68,9 +68,9 @@ public class Ocpp16 extends OcppCommon implements OcppIF {
             }
 
             if (websocket.isOpen()) {
-                eventMgr.trigger(EventIds.CONNECTED, "  success");
+                eventMgr.trigger(EventIds.CONNECTED, deviceId, "  success");
             } else {
-                eventMgr.trigger(EventIds.CONNECTION_FAILED, "  failure");
+                eventMgr.trigger(EventIds.CONNECTION_FAILED, deviceId, "  failure");
             }
         } finally {
             busy = false;
@@ -84,6 +84,8 @@ public class Ocpp16 extends OcppCommon implements OcppIF {
         
         busy = true;
         
+        eventMgr.trigger(EventIds.INFO, deviceId, "disconnecting...");
+        
         try {
             websocket.close();
             int timeout = 100;
@@ -92,7 +94,14 @@ public class Ocpp16 extends OcppCommon implements OcppIF {
             busy = false;
         }
         
-        return websocket.isClosed();
+        boolean success = websocket.isClosed();
+        if (success) {
+            eventMgr.trigger(EventIds.INFO, deviceId, "disconnected!");
+        } else {
+            eventMgr.trigger(EventIds.INFO, deviceId, "disconnection failed!");
+        }
+        
+        return success;
     }
     
     

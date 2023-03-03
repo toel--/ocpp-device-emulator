@@ -53,7 +53,7 @@ public class DateTimeUtil {
         
         SimpleDateFormat sdf;
         if (s.contains("Z")) {
-            sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
+            sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
         } else {
             sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS");
         }

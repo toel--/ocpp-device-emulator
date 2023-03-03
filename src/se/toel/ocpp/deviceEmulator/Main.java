@@ -6,6 +6,7 @@ package se.toel.ocpp.deviceEmulator;
 import java.net.URISyntaxException;
 import se.toel.ocpp.deviceEmulator.modes.ApplicationModeIF;
 import se.toel.ocpp.deviceEmulator.modes.DeviceEmulator;
+import se.toel.ocpp.deviceEmulator.modes.DeviceTester;
 import se.toel.ocpp.deviceEmulator.modes.DeviceWatcher;
 import se.toel.util.Dev;
 
@@ -25,13 +26,18 @@ public class Main {
         if (args.length<1) showSyntaxAndExit();
         String deviceId = args[0];
         
-        if ("watcher".equalsIgnoreCase(deviceId)) {
-            mode = new DeviceWatcher();
-        } else {
-            if (args.length<3) showSyntaxAndExit();
-            String url = args[1];
-            String ocppVersion = args[2];
-            mode = new DeviceEmulator(deviceId, url, ocppVersion); 
+        switch (deviceId) {
+            case "watcher":
+                mode = new DeviceWatcher();
+                break;
+            case "tester":
+                mode = new DeviceTester();
+                break;
+            default:
+                if (args.length<3) showSyntaxAndExit();
+                String url = args[1];
+                String ocppVersion = args[2];
+                mode = new DeviceEmulator(deviceId, url, ocppVersion); 
             
         }
         

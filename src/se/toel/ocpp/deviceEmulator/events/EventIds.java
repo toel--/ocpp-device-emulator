@@ -26,11 +26,18 @@ public class EventIds {
             TRANSACTION_STARTING        = 10030,
             TRANSACTION_STARTED         = 10031,
             TRANSACTION_START_FAILED    = 10032,
-            HEARTBEAT_BEFORE            = 10040,
-            HEARTBEAT_AFTER             = 10041,
-            HEARTBEAT_FAILED            = 10042,
+            TRANSACTION_STOPPING        = 10040,
+            TRANSACTION_STOPPED         = 10041,
+            TRANSACTION_STOP_FAILED     = 10042,
+            HEARTBEAT_BEFORE            = 10050,
+            HEARTBEAT_AFTER             = 10051,
+            HEARTBEAT_FAILED            = 10052,
+            METER_VALUES_BEFORE         = 10060,
+            METER_VALUES_AFTER          = 10061,
+            METER_VALUES_FAILED         = 10062,
             
-            INFO                        = 10050,
+            
+            INFO                        = 10099,
             
             
             OCPP_SENDING                = 10100,

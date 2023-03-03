@@ -4,7 +4,6 @@
 
 package se.toel.ocpp.deviceEmulator.events;
 
-import se.toel.event.EventIF;
 
 /**
  *
@@ -62,6 +61,7 @@ public class Event implements EventIF {
         return id;
     }
 
+    @Override
     public String getDeviceId() {
         return deviceId;
     }

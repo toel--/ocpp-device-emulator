@@ -4,15 +4,13 @@
 
 package se.toel.ocpp.deviceEmulator.modes;
 
-import java.util.HashMap;
 import java.util.Iterator;
-import java.util.Map;
 import org.java_websocket.handshake.ServerHandshake;
-import se.toel.event.EventHandler;
-import se.toel.event.EventIF;
-import se.toel.event.EventListenerIF;
 import se.toel.ocpp.deviceEmulator.device.Device;
+import se.toel.ocpp.deviceEmulator.events.EventHandler;
+import se.toel.ocpp.deviceEmulator.events.EventIF;
 import se.toel.ocpp.deviceEmulator.events.EventIds;
+import se.toel.ocpp.deviceEmulator.events.EventListenerIF;
 import se.toel.util.Dev;
 
 /**

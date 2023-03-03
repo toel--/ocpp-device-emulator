@@ -17,7 +17,6 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import se.toel.event.EventHandler;
 import se.toel.ocpp.deviceEmulator.communication.CallbackIF;
 import se.toel.ocpp.deviceEmulator.device.impl.LocalAuthorization;
 import se.toel.ocpp.deviceEmulator.device.impl.AuthorizationCache;
@@ -26,6 +25,7 @@ import se.toel.ocpp.deviceEmulator.device.impl.LocalAuthorizationList;
 import se.toel.ocpp.deviceEmulator.communication.Ocpp16;
 import se.toel.ocpp.deviceEmulator.communication.OcppIF;
 import se.toel.ocpp.deviceEmulator.events.Event;
+import se.toel.ocpp.deviceEmulator.events.EventHandler;
 import se.toel.ocpp.deviceEmulator.events.EventIds;
 import se.toel.ocpp.deviceEmulator.utils.DateTimeUtil;
 import se.toel.ocpp.deviceEmulator.utils.FTP;
@@ -64,7 +64,8 @@ public class Device {
             STATUS_NOTIFICATION = "StatusNotification",
             FIRMWARE_STATUS_NOTIFICATION = "FirmwareStatusNotification",
             METER_VALUES = "MeterValues",
-            DIAGNOSTICS_STATUS_NOTIFICATION = "DiagnosticsStatusNotification";
+            DIAGNOSTICS_STATUS_NOTIFICATION = "DiagnosticsStatusNotification",
+            READY = "Ready";
     
     private final JSONObject jsonStatusAccepted = new JSONObject("{\"status\": \"Accepted\"}"); 
     private final JSONObject jsonStatusRejected = new JSONObject("{\"status\": \"Rejected\"}");
@@ -87,7 +88,7 @@ public class Device {
     // Auhorize stuff
     private static final String userId = "1";
     
-    
+    public boolean autoMeterValues = true;
     
     
      /***************************************************************************
@@ -115,7 +116,7 @@ public class Device {
         
         authCache = new AuthorizationCache();
         authCache.load(storePath+"/authorizationCache.dat");
-        
+                
         heart = new Heart();
         
         switch (ocppVersion) {
@@ -136,6 +137,7 @@ public class Device {
         String authorizationKey = config.get("AuthorizationKey");        
         boolean connected = ocpp.connect(authorizationKey);
         if (connected) scheduleRemove(CONNECT);
+        scheduled.put(System.currentTimeMillis()+3000, READY);
         return connected;
         
     }
@@ -143,6 +145,24 @@ public class Device {
     public boolean disconnect() {
         
         return ocpp.disconnect();
+    }
+    
+    public boolean doReady() {
+     
+        for (Connector connector : connectors) {
+            if (connector.getStatus().equals(Connector.STATUS_UNAVAILABLE)) {
+                if (connector.getTransactionId()>0 && connector.getChargingCurrent()>0) {
+                    connector.setStatus(Connector.STATUS_CHARGING);
+                } else if (connector.getTransactionId()>0) {
+                    connector.setStatus(Connector.STATUS_SUSPENDEDEVSE);
+                } else {
+                    connector.setStatus(Connector.STATUS_AVAILABLE);
+                }
+            }
+        }
+        
+        return true;
+        
     }
     
     public boolean doBootNotification() {
@@ -200,7 +220,7 @@ public class Device {
             // This is about the Charge Point main controller
             req.put("connectorId", 0);
             req.put("errorCode", "NoError");
-            req.put("status", "Available");
+            req.put("status", Connector.STATUS_AVAILABLE);
         } else {
             // and this about a specific connector
             req.put("connectorId", connector.getId());                                                                                                          // Required. The deviceId of the connector for which the status is reported. Id '0' (zero) is used if the status is for the Charge Point main controller.
@@ -233,7 +253,7 @@ public class Device {
      
         // 
         
-        eventMgr.trigger(EventIds.AUTORIZING, userId);
+        eventMgr.trigger(EventIds.AUTORIZING, deviceId, userId);
         
         boolean accepted;
         long now = System.currentTimeMillis();
@@ -258,9 +278,9 @@ public class Device {
         accepted = "Accepted".equalsIgnoreCase(idTagInfo.getString("status"));
         
         if (accepted) {
-            eventMgr.trigger(EventIds.AUTORIZED, "  user "+userId+" is authorized");
+            eventMgr.trigger(EventIds.AUTORIZED, deviceId, "  user "+userId+" is authorized");
         } else {
-            eventMgr.trigger(EventIds.AUTORIZATION_FAILED, "  user "+userId+" is NOT authorized");
+            eventMgr.trigger(EventIds.AUTORIZATION_FAILED, deviceId, "  user "+userId+" is NOT authorized");
         }
         
         return accepted;
@@ -295,7 +315,7 @@ public class Device {
                 if (entry.getKey()<now) {
                     scheduled.remove(entry.getKey());
                     String action = entry.getValue();
-                    triggerAction(entry.getValue());
+                    triggerAction(action);
                     break;  // Only take one at a time
                 }
             }
@@ -327,7 +347,7 @@ public class Device {
             }
 
             // if charging send a MeterValues at the requested interval
-            {
+            if (autoMeterValues) {
                 int interval = config.getMeterValueSampleInterval();
                 if (interval>0) {
                     if (tickCount%interval==0) {
@@ -389,6 +409,7 @@ public class Device {
         if (isConnected) {
             switch (command) {
 
+                case READY: doReady(); break;
                 case BOOT_NOTIFICATION: doBootNotification(); break;
                 case AUTHORIZE: doAuthorize(); break;
                 case START_TRANSACTION: doStartTransaction(json); break;
@@ -413,11 +434,57 @@ public class Device {
     }
     
     
+    public void doPlugIn(int connector) {
+    
+        Connector c = getConnector(connector);
+        if (c!=null) {
+            c.setPluggedIn(true);
+            switch (c.getStatus()) {
+                case Connector.STATUS_AVAILABLE: doStartTransaction(connector, userId); break;
+            }
+        }
+        
+    }
+    
+    public void doUnplug(int connector) {
+     
+        Connector c = getConnector(connector);
+        if (c!=null) {
+            c.setPluggedIn(false);
+            if (doStopTransaction(c)) {
+                c.setStatus(Connector.STATUS_AVAILABLE);
+            }
+        
+        }
+        
+    }
+    
+    public void doPause(int connector) {
+        
+        Connector c = getConnector(connector);
+        if (c!=null) {    
+            c.setChargingCurrent(0);
+            c.setStatus(Connector.STATUS_SUSPENDEDEVSE);
+        }
+        
+    }
+    
+    public void doResume(int connector) {
+        
+        Connector c = getConnector(connector);
+        if (c!=null) {    
+            c.setChargingCurrent(config.getCurrentMaxAssignment());
+            c.setStatus(Connector.STATUS_CHARGING);
+        }
+        
+    }
+    
+    
     public void doReset(String msgId, JSONObject json) {
         
         String resetType = json.optString("type", "Soft");
         
-        eventMgr.trigger(EventIds.RESETING, "  performing a "+resetType+" reset...");
+        eventMgr.trigger(EventIds.RESETING, deviceId, "  performing a "+resetType+" reset...");
         
         // Send confirmation
         ocpp.sendConf(msgId, jsonStatusAccepted);
@@ -440,7 +507,7 @@ public class Device {
         bootNotificationSent = false;
         scheduled.put(System.currentTimeMillis()+5000l, CONNECT);
         
-        eventMgr.trigger(EventIds.RESETED, "  "+resetType+" reset done");
+        eventMgr.trigger(EventIds.RESETED, deviceId, "  "+resetType+" reset done");
         
     }
     
@@ -600,15 +667,24 @@ public class Device {
             transactionData = connector.getMeterValues();
         }
         
+        int transactionId = connector.getTransactionId();
+        if (transactionId==0) {                                                 // Abort if there is not known transaction Id
+            connector.setReservationId(0);
+            connector.setStatus(Connector.STATUS_FINISHING);
+            return true;
+        }
+        
         // Send the request to the Central System
         long now = System.currentTimeMillis();
         JSONObject req = new JSONObject();
+        req.put("transactionId", transactionId);                                // Required. This contains the transaction-deviceId as received by the StartTransaction.conf.
         req.put("idTag", connector.getIdTag());                                 // Optional. This contains the identifier which requested to stop the charging. It is optional because a Charge Point may terminate charging without the presence of an idTag, e.g. in case of a reset. A Charge Point SHALL send the idTag if known.
         req.put("meterStop", connector.getMeterWh());                           // Required. This contains the meter value in Wh for the connector at end of the transaction.
         req.put("timestamp", DateTimeUtil.toIso8601(now));                      // Required. This contains the date and time on which the transaction is stopped.
-        req.put("transactionId", connector.getTransactionId());                 // Required. This contains the transaction-deviceId as received by the StartTransaction.conf.
         req.put("reason", connector.stopReason);                                // Optional. This contains the reason why the transaction was stopped. MAY only be omitted when the Reason is "Local".
         req.put("transactionData", transactionData);                            // Optional. This contains transaction usage details relevant for billing purposes.
+        
+        eventMgr.trigger(EventIds.TRANSACTION_STOPPING, deviceId, req.toString());
         
         String msgId = Long.toHexString(now);
         ocpp.sendReq(msgId, STOP_TRANSACTION, req);
@@ -616,13 +692,14 @@ public class Device {
         JSONArray json = waitForAnswer(msgId);
         if (json==null) {
             // Retry later
-            scheduled.put(now+10000, STOP_TRANSACTION+" {\"transactionId\":"+connector.getTransactionId()+"}");
+            scheduled.put(now+10000, STOP_TRANSACTION+" {\"transactionId\":"+transactionId+"}");
             return false;
         }
         
         boolean success = json.getInt(0)==3;
         
         if (success) {
+            eventMgr.trigger(EventIds.TRANSACTION_STOPPED, deviceId, req.toString());
             JSONObject conf = json.getJSONObject(2);
             JSONObject idTagInfo = conf.optJSONObject("idTagInfo");                 // Optional. This contains information about authorization status, expiry and parent deviceId. It is optional, because a transaction may have been stopped without an identifier.
         
@@ -633,12 +710,14 @@ public class Device {
                 String expiryDate = idTagInfo.optString("expiryDate");              // Optional. This contains the date at which idTag should be removed from the Authorization Cache.
                 success = "Accepted".equals(status);
             }
+        } else {
+            eventMgr.trigger(EventIds.TRANSACTION_STOP_FAILED, deviceId, req.toString());
         }
         
         if (success) {
             connector.setReservationId(0);
             connector.setTransactionId(0);
-            connector.setStatus(Connector.STATUS_AVAILABLE);
+            connector.setStatus(Connector.STATUS_FINISHING);
         }
         
         return success;
@@ -732,6 +811,9 @@ public class Device {
         if (connector.getTransactionId()>0) {
             // We have a transaction allready
             ocpp.sendConf(msgId, jsonStatusRejected);
+        } else if (!connector.isPluggedIn()) {
+            // Not plugged in!
+            ocpp.sendConf(msgId, jsonStatusRejected);
         } else {
                     
             connector.setIdTag(String.valueOf(idTag));
@@ -764,16 +846,16 @@ public class Device {
     }
     
     
-    private boolean doStartTransaction(JSONObject params) {
+    public boolean doStartTransaction(int connectorId, String idTag) {
                 
-        // Get the params to use for the StartTransaction.req
-        int connectorId = params.optInt("connectorId", 1);
-        String idTag = params.getString("idTag");
-        JSONObject chargingProfile = params.optJSONObject("chargingProfile");
-        
         Connector connector = connectors.get(connectorId);
         
-        eventMgr.trigger(EventIds.TRANSACTION_STARTING, "   Starting transaction for connector "+connectorId);
+        if (!connector.isPluggedIn()) {
+            eventMgr.trigger(EventIds.INFO, deviceId, "   Not plugged in: denying StartTransaction "+connectorId);
+            return false;
+        }
+        
+        eventMgr.trigger(EventIds.TRANSACTION_STARTING, deviceId, "   Starting transaction for connector "+connectorId);
         
         // Send the request to the Central System
         long now = System.currentTimeMillis();
@@ -791,10 +873,15 @@ public class Device {
         JSONArray json = waitForAnswer(msgId);
         if (json==null) {
             // No answer? wait 10s and try again
+            // JSONObject params = new JSONObject();
+            // params.put("connectorId", connectorId);
+            // params.put("idTag", idTag);
             // scheduled.put(now+10000, START_TRANSACTION+" "+params.toString());
             return false;
         }
-        if (json.getInt(0)!=3) return false;
+        if (json.getInt(0)!=3) {
+            return false;
+        }
         
         JSONObject conf = json.getJSONObject(2);
         
@@ -811,37 +898,64 @@ public class Device {
         }
         
         boolean accepted = "Accepted".equals(status);
+        if (!accepted) {
+            Dev.hereIam("");
+        }
+        
         switch (status) {
-            case "Accepted": eventMgr.trigger(EventIds.TRANSACTION_STARTED, "   Transaction "+connector.getTransactionId()+" started"); break;
-            case "Blocked": eventMgr.trigger(EventIds.TRANSACTION_START_FAILED, "   Identifier has been blocked. Not allowed for charging."); break;
-            case "Expired": eventMgr.trigger(EventIds.TRANSACTION_START_FAILED, "   Identifier has expired. Not allowed for charging."); break;
-            case "Invalid": eventMgr.trigger(EventIds.TRANSACTION_START_FAILED, "   Identifier is unknown. Not allowed for charging."); break;
-            case "ConcurrentTx": eventMgr.trigger(EventIds.TRANSACTION_START_FAILED, "   Identifier is already involved in another transaction and multiple transactions are not allowed."); break;
+            case "Accepted": eventMgr.trigger(EventIds.TRANSACTION_STARTED, deviceId, "   Transaction "+connector.getTransactionId()+" started for connector "+connectorId); break;
+            case "Blocked": eventMgr.trigger(EventIds.TRANSACTION_START_FAILED, deviceId, "   Identifier has been blocked. Not allowed for charging."); break;
+            case "Expired": eventMgr.trigger(EventIds.TRANSACTION_START_FAILED, deviceId, "   Identifier has expired. Not allowed for charging."); break;
+            case "Invalid": eventMgr.trigger(EventIds.TRANSACTION_START_FAILED, deviceId, "   Identifier is unknown. Not allowed for charging."); break;
+            case "ConcurrentTx": eventMgr.trigger(EventIds.TRANSACTION_START_FAILED, deviceId, "   Identifier is already involved in another transaction and multiple transactions are not allowed."); break;
         }
         
         if (accepted) {
-            connector.setStatus(Connector.STATUS_CHARGING);
+            if (connector.getChargingCurrent()>0) {
+                connector.setStatus(Connector.STATUS_CHARGING);
+            } else {
+                connector.setStatus(Connector.STATUS_SUSPENDEDEVSE);
+            }
         }
                         
         return accepted;
         
     }
     
+    private boolean doStartTransaction(JSONObject params) {
+                
+        // Get the params to use for the StartTransaction.req
+        int connectorId = params.optInt("connectorId", 1);
+        String idTag = params.getString("idTag");
+        
+        return doStartTransaction(connectorId, idTag);
+        
+    }
+    
+    public boolean doStopTransaction(int transactionId) {
+        
+        Connector connector = getConnectorWithTransactionId(transactionId);
+        
+        if (connector==null) {
+            return false;      // No connector with this transaction
+        }
+        
+        return doStopTransaction(connector);
+        
+    }
+        
     
     private boolean doStopTransaction(JSONObject params) {
                 
         // Get the params to use for the StopTransaction.req
         int transactionId = params.getInt("transactionId");
-        Connector connector = getConnectorWithTransactionId(transactionId);
-        
-        if (connector==null) return false;      // No connector with this transaction
-        
-        return doStopTransaction(connector);
+        return doStopTransaction(transactionId);
         
     }
+        
     
     
-    private void doMeterValues(int connectorId) {
+    public void doMeterValues(int connectorId) {
      
         Connector connector = connectors.get(connectorId);
         doMeterValues(connector);
@@ -863,7 +977,13 @@ public class Device {
     
     private void doMeterValues(JSONObject json) {
      
-        doSimpleRequest(METER_VALUES, json); 
+        eventMgr.trigger(EventIds.METER_VALUES_BEFORE, deviceId, json.toString());
+        JSONArray ans = doSimpleRequest(METER_VALUES, json);
+        if (ans.getInt(0)==3) {
+            eventMgr.trigger(EventIds.METER_VALUES_AFTER, deviceId, json.toString());
+        } else {
+            eventMgr.trigger(EventIds.METER_VALUES_FAILED, deviceId, json.toString());
+        }
         
     }
     
@@ -887,7 +1007,7 @@ public class Device {
     
     private void doHeartBeat() {
         
-        eventMgr.trigger(EventIds.HEARTBEAT_BEFORE, "   Sending heartbeat");
+        eventMgr.trigger(EventIds.HEARTBEAT_BEFORE, deviceId, "   Sending heartbeat");
         
         long now = System.currentTimeMillis();
         JSONObject req = new JSONObject();        
@@ -897,7 +1017,7 @@ public class Device {
         
         JSONArray json = waitForAnswer(msgId);
         if (json==null || json.getInt(0)!=3) {
-            eventMgr.trigger(EventIds.HEARTBEAT_FAILED, "");
+            eventMgr.trigger(EventIds.HEARTBEAT_FAILED, deviceId, "");
             return;
         }
         
@@ -908,7 +1028,7 @@ public class Device {
         DateFormat df = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
         String datetime = df.format(new Date(timestamp));
         
-        eventMgr.trigger(EventIds.HEARTBEAT_AFTER, "   Central system current time is "+datetime);
+        eventMgr.trigger(EventIds.HEARTBEAT_AFTER, deviceId, "   Central system current time is "+datetime);
         
         // And reshedule
         scheduled.put(now+heartbeatInverval*1000l, HEARTBEAT);
@@ -919,10 +1039,18 @@ public class Device {
     public void stop() {
                 
         for (Connector connector : connectors) {
-            if (!connector.getStatus().equals(Connector.STATUS_AVAILABLE)) doStopTransaction(connector);
+            if (connector.getTransactionId()>0) doStopTransaction(connector);
         }
         
     }
+    
+    
+    public Connector getConnector(int connectorId) {
+     
+        return connectors.get(connectorId);
+        
+    }
+    
     
     private void scheduleRemove(String command) {
                 
@@ -1044,6 +1172,7 @@ public class Device {
                     lastTick = System.currentTimeMillis();
                 }
             }
+            System.out.println("+++++ exiting Heart.run() +++++");
         }
 
         public void shutdown() {

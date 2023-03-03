@@ -6,12 +6,12 @@ package se.toel.ocpp.deviceEmulator.modes;
 
 import java.util.HashMap;
 import java.util.Map;
-import se.toel.event.EventHandler;
-import se.toel.event.EventIF;
-import se.toel.event.EventListenerIF;
 import se.toel.ocpp.deviceEmulator.device.Device;
 import se.toel.ocpp.deviceEmulator.events.Event;
+import se.toel.ocpp.deviceEmulator.events.EventHandler;
+import se.toel.ocpp.deviceEmulator.events.EventIF;
 import se.toel.ocpp.deviceEmulator.events.EventIds;
+import se.toel.ocpp.deviceEmulator.events.EventListenerIF;
 import se.toel.util.Dev;
 import se.toel.util.IniFile;
 

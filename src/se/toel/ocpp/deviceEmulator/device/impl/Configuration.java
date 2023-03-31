@@ -53,6 +53,10 @@ public class Configuration extends DataMap {
         return _getInt("CurrentMaxAssignment");
     }
 
+    public boolean autoPlugin() {
+        return _getBoolean("_auto_plugin", true);
+    }
+    
     /***************************************************************************
      * Private methods
      **************************************************************************/

@@ -446,17 +446,18 @@ public class Device {
         
     }
     
-    public void doUnplug(int connector) {
+    public boolean doUnplug(int connector) {
      
+        boolean success = false;
         Connector c = getConnector(connector);
         if (c!=null) {
-            c.setPluggedIn(false);
             if (doStopTransaction(c)) {
-                c.setStatus(Connector.STATUS_AVAILABLE);
+                c.setStatus(Connector.STATUS_AVAILABLE);                
             }
-        
+            c.setPluggedIn(false);
+            success = true;
         }
-        
+        return success;
     }
     
     public void doPause(int connector) {
@@ -671,6 +672,10 @@ public class Device {
         if (transactionId==0) {                                                 // Abort if there is not known transaction Id
             connector.setReservationId(0);
             connector.setStatus(Connector.STATUS_FINISHING);
+            if (config.autoPlugin()) {
+                connector.setPluggedIn(false);
+                connector.setStatus(Connector.STATUS_AVAILABLE);
+            }
             return true;
         }
         
@@ -718,6 +723,11 @@ public class Device {
             connector.setReservationId(0);
             connector.setTransactionId(0);
             connector.setStatus(Connector.STATUS_FINISHING);
+            if (config.autoPlugin()) {
+                Dev.sleep(1);
+                connector.setPluggedIn(false);
+                connector.setStatus(Connector.STATUS_AVAILABLE);
+            }
         }
         
         return success;
@@ -756,7 +766,42 @@ public class Device {
         
     }
     
-    
+    public void doUnlockConnector(String msgId, JSONObject json) {
+        
+        int connectorId = json.optInt("connectorId");
+        String status;
+        
+        Connector c = getConnector(connectorId);
+        if (c==null) {
+            status = "NotSupported";
+        } else {
+            switch (c.getStatus()) {
+                case Connector.STATUS_FAULTED:
+                case Connector.STATUS_AVAILABLE: 
+                    status = "Unlocked"; 
+                    break;
+                case Connector.STATUS_SUSPENDEDEV:
+                case Connector.STATUS_SUSPENDEDEVSE:
+                case Connector.STATUS_CHARGING:
+                case Connector.STATUS_RESERVED:
+                case Connector.STATUS_PREPARING:
+                case Connector.STATUS_FINISHING:
+                    if (doUnplug(connectorId)) {
+                        status = "Unlocked";
+                    } else {
+                        status = "UnlockFailed";
+                    }
+                    break;
+                default:
+                    status = "NotSupported";
+            }
+        }
+        
+        JSONObject payload = new JSONObject();
+        payload.put("status", status);
+        ocpp.sendConf(msgId,  payload );        
+        
+    }
     
     private void doClearChargingProfile(String msgId, JSONObject json) {
      
@@ -811,19 +856,29 @@ public class Device {
         if (connector.getTransactionId()>0) {
             // We have a transaction allready
             ocpp.sendConf(msgId, jsonStatusRejected);
-        } else if (!connector.isPluggedIn()) {
-            // Not plugged in!
-            ocpp.sendConf(msgId, jsonStatusRejected);
-        } else {
-                    
-            connector.setIdTag(String.valueOf(idTag));
-            
-            // Send confirmation
-            ocpp.sendConf(msgId, jsonStatusAccepted);
-
-            // trigger next action
-            scheduled.put(System.currentTimeMillis(), START_TRANSACTION+" "+json.toString());
+            return;
         }
+        
+        if (!connector.isPluggedIn()) {
+            if (config.autoPlugin()) {
+                connector.setIdTag(String.valueOf(idTag));
+                ocpp.sendConf(msgId, jsonStatusAccepted);
+                doPlugIn(connectorId);  // Will start the transaction
+            } else {
+                // Not plugged in!
+                ocpp.sendConf(msgId, jsonStatusRejected);
+                return;
+            }
+        }
+                    
+        connector.setIdTag(String.valueOf(idTag));
+
+        // Send confirmation
+        ocpp.sendConf(msgId, jsonStatusAccepted);
+
+        // trigger next action
+        scheduled.put(System.currentTimeMillis(), START_TRANSACTION+" "+json.toString());
+        
         
     }
     
@@ -851,8 +906,12 @@ public class Device {
         Connector connector = connectors.get(connectorId);
         
         if (!connector.isPluggedIn()) {
-            eventMgr.trigger(EventIds.INFO, deviceId, "   Not plugged in: denying StartTransaction "+connectorId);
-            return false;
+            if (config.autoPlugin()) {
+                doPlugIn(connectorId);
+            } else {
+                eventMgr.trigger(EventIds.INFO, deviceId, "   Not plugged in: denying StartTransaction "+connectorId);
+                return false;
+            }
         }
         
         eventMgr.trigger(EventIds.TRANSACTION_STARTING, deviceId, "   Starting transaction for connector "+connectorId);
@@ -1259,6 +1318,7 @@ public class Device {
                 case "UpdateFirmware": doUpdateFirmware(msgId, ja.getJSONObject(3)); break;
                 case "GetConfiguration": doGetConfiguration(msgId, ja.getJSONObject(3)); break;
                 case "TriggerMessage": doTriggerMessage(msgId, ja.getJSONObject(3)); break;
+                case "UnlockConnector": doUnlockConnector(msgId, ja.getJSONObject(3)); break;
 
                 default:
                     Dev.warn("processRequest unsupported command: "+command);

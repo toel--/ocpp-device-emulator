@@ -23,7 +23,7 @@ public class DateTimeUtilTest {
     public void testToIso8601() {
         System.out.println("toIso8601");
         long timestamp = 1640582955178l;
-        String expResult = "2021-12-27T05:29:15.178";
+        String expResult = "2021-12-27T05:29:15.178Z";
         String result = DateTimeUtil.toIso8601(timestamp);
         assertEquals(expResult, result);
     }

@@ -37,7 +37,7 @@ import se.toel.util.StringUtil;
  *
  * @author toel
  */
-public class Device {
+public class Device implements DeviceIF {
 
     /***************************************************************************
      * Constants and variables
@@ -138,9 +138,13 @@ public class Device {
      /***************************************************************************
      * Public methods
      **************************************************************************/
+    public void setAutoMeterValues(boolean autoMeterValues) {
+        this.autoMeterValues = autoMeterValues;
+    }
+
     public boolean connect() {
-        
-        String authorizationKey = config.get("AuthorizationKey");        
+
+        String authorizationKey = config.get("AuthorizationKey");
         boolean connected = ocpp.connect(authorizationKey);
         if (connected) scheduleRemove(CONNECT);
         scheduled.put(System.currentTimeMillis()+3000, READY);

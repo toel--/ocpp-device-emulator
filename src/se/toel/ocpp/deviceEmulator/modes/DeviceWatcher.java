@@ -7,6 +7,7 @@ package se.toel.ocpp.deviceEmulator.modes;
 import java.util.HashMap;
 import java.util.Map;
 import se.toel.ocpp.deviceEmulator.device.Device;
+import se.toel.ocpp.deviceEmulator.device.DeviceIF;
 import se.toel.ocpp.deviceEmulator.events.Event;
 import se.toel.ocpp.deviceEmulator.events.EventHandler;
 import se.toel.ocpp.deviceEmulator.events.EventIF;
@@ -25,7 +26,7 @@ public class DeviceWatcher implements ApplicationModeIF, EventListenerIF {
      * Constants and variables
      **************************************************************************/    
     private boolean running = true;
-    private final Map<String, Device> devices = new HashMap<>();
+    private final Map<String, DeviceIF> devices = new HashMap<>();
     IniFile ini = new IniFile("data/deviceWatcher.ini");
 
      /***************************************************************************
@@ -78,7 +79,7 @@ public class DeviceWatcher implements ApplicationModeIF, EventListenerIF {
     
     public void shutdown() {
         
-        for (Device device : devices.values()) {
+        for (DeviceIF device : devices.values()) {
             device.shutdown();
         }
         
@@ -126,7 +127,7 @@ public class DeviceWatcher implements ApplicationModeIF, EventListenerIF {
 
                 String deviceId = ini.getValue(section, "device-id", "");
                 String ocppVersion = ini.getValue(section, "ocpp-version", "ocpp1.6");
-                Device device = new Device(deviceId, url, ocppVersion);
+                DeviceIF device = new Device(deviceId, url, ocppVersion);
                 devices.put(deviceId, device);
                 Dev.info("   starting device "+deviceId+" using "+url);
                 device.start();

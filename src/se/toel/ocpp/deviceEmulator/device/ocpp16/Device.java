@@ -729,7 +729,7 @@ public class Device implements DeviceIF {
             JSONObject idTagInfo = conf.optJSONObject("idTagInfo");                 // Optional. This contains information about authorization status, expiry and parent deviceId. It is optional, because a transaction may have been stopped without an identifier.
         
             if (idTagInfo!=null) {
-                authCache.update(connector.getIdTag(), idTagInfo);
+                if (connector.getIdTag()!=null) authCache.update(connector.getIdTag(), idTagInfo);   // idTag may be absent: a transaction can be stopped without an identifier
                 String status = idTagInfo.getString("status");                      // Required. This contains whether the idTag has been accepted or not by the Central System.
                 String parentIdTag = idTagInfo.optString("parentIdTag");            // Optional. This contains the parent-identifier.
                 String expiryDate = idTagInfo.optString("expiryDate");              // Optional. This contains the date at which idTag should be removed from the Authorization Cache.
@@ -964,7 +964,8 @@ public class Device implements DeviceIF {
         JSONObject conf = json.getJSONObject(2);
         
         connector.setTransactionId(conf.getInt("transactionId"));
-        
+        connector.setIdTag(idTag);
+
         JSONObject idTagInfo = conf.getJSONObject("idTagInfo");
         String expiryDate = idTagInfo.optString("expiryDate");
         String parentIdTag = idTagInfo.optString("parentIdTag");

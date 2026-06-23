@@ -49,7 +49,7 @@ public class Ocpp16 extends OcppCommon implements OcppIF {
             
             eventMgr.trigger(EventIds.CONNECTING, deviceId, "Connecting using " + uri);
             websocket = new WebSocket(uri);
-            websocket.setConnectionLostTimeout(60);
+            websocket.setConnectionLostTimeout(60);         // https://github.com/TooTallNate/Java-WebSocket/wiki/Lost-connection-detection
             
             websocket.registerCallback(callback);
             if (!websocket.isOpen()) {
@@ -121,7 +121,7 @@ public class Ocpp16 extends OcppCommon implements OcppIF {
     }
     
     @Override
-    public void sendConf(String id, JSONObject payload) {
+    public void sendResponse(String id, JSONObject payload) {
                         
         JSONArray msg = new JSONArray();
         msg.put(3);

@@ -15,6 +15,6 @@ public interface OcppIF {
     public boolean connect(String AuthorizationKey);
     public boolean disconnect();
     public void sendReq(String id, String message, JSONObject payload);
-    public void sendConf(String id, JSONObject payload);
+    public void sendResponse(String id, JSONObject payload);
     
 }

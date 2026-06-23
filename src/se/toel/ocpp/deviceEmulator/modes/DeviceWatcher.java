@@ -6,7 +6,7 @@ package se.toel.ocpp.deviceEmulator.modes;
 
 import java.util.HashMap;
 import java.util.Map;
-import se.toel.ocpp.deviceEmulator.device.ocpp16.Device;
+import se.toel.ocpp.deviceEmulator.device.DeviceFactory;
 import se.toel.ocpp.deviceEmulator.device.DeviceIF;
 import se.toel.ocpp.deviceEmulator.events.Event;
 import se.toel.ocpp.deviceEmulator.events.EventHandler;
@@ -127,7 +127,7 @@ public class DeviceWatcher implements ApplicationModeIF, EventListenerIF {
 
                 String deviceId = ini.getValue(section, "device-id", "");
                 String ocppVersion = ini.getValue(section, "ocpp-version", "ocpp1.6");
-                DeviceIF device = new Device(deviceId, url, ocppVersion);
+                DeviceIF device = DeviceFactory.create(deviceId, url, ocppVersion);
                 devices.put(deviceId, device);
                 Dev.info("   starting device "+deviceId+" using "+url);
                 device.start();

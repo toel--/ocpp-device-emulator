@@ -6,7 +6,7 @@ package se.toel.ocpp.deviceEmulator.modes;
 
 import java.util.Iterator;
 import org.java_websocket.handshake.ServerHandshake;
-import se.toel.ocpp.deviceEmulator.device.ocpp16.Device;
+import se.toel.ocpp.deviceEmulator.device.DeviceFactory;
 import se.toel.ocpp.deviceEmulator.device.DeviceIF;
 import se.toel.ocpp.deviceEmulator.events.EventHandler;
 import se.toel.ocpp.deviceEmulator.events.EventIF;
@@ -46,7 +46,7 @@ public class DeviceEmulator implements ApplicationModeIF, EventListenerIF {
             }
         }); 
         
-        device = new Device(deviceId, url, ocppVersion);
+        device = DeviceFactory.create(deviceId, url, ocppVersion);
         
     }
     

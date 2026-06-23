@@ -4,7 +4,7 @@
 
 package se.toel.ocpp.deviceEmulator.modes;
 
-import se.toel.ocpp.deviceEmulator.device.ocpp16.Device;
+import se.toel.ocpp.deviceEmulator.device.DeviceFactory;
 import se.toel.ocpp.deviceEmulator.device.DeviceIF;
 import se.toel.ocpp.deviceEmulator.events.EventHandler;
 import se.toel.ocpp.deviceEmulator.events.EventIF;
@@ -54,7 +54,7 @@ public class DeviceTester implements ApplicationModeIF, EventListenerIF {
         String deviceId = ini.getValue(scenario, "device-id", "01234567899876543210");
         String ocppVersion = ini.getValue(scenario, "ocpp-version", "ocpp1.6");
         
-        device = new Device(deviceId, url, ocppVersion);
+        device = DeviceFactory.create(deviceId, url, ocppVersion);
         device.setAutoMeterValues(false);
         
         ini.save();

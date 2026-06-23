@@ -7,13 +7,14 @@ package se.toel.ocpp.deviceEmulator.device.impl;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import se.toel.collection.DataMap;
+import se.toel.ocpp.deviceEmulator.device.ConnectorIF;
 import se.toel.ocpp.deviceEmulator.utils.DateTimeUtil;
 
 /**
  *
  * @author toel
  */
-public class Connector extends DataMap {
+public class Connector extends DataMap implements ConnectorIF {
 
     /***************************************************************************
      * Constants and variables
@@ -113,7 +114,12 @@ public class Connector extends DataMap {
     }
     
     public double getMeterWh() {
-        return _getDouble(METER_WH);
+        double wh = _getDouble(METER_WH);
+        if (wh<0) {
+            wh = 0;
+            setMeterWh(wh);
+        }
+        return wh; 
     }
     public void setMeterWh(double Wh) {
         _set(METER_WH, Wh);
@@ -226,7 +232,7 @@ public class Connector extends DataMap {
         sampledValue.put("context", "Sample.Periodic");                 // Should be Trigger on trigger message
         sampledValue.put("format", "Raw");
         sampledValue.put("measurand", "Energy.Active.Import.Register");
-        sampledValue.put("value", Math.round(getMeterWh()));            // Send rounded values for Wh
+        sampledValue.put("value", String.valueOf(getMeterWh()));            // Send Wh value as string
         sampledValue.put("location", "Outlet");
         sampledValue.put("unit", "Wh");
         sampledValues.put(sampledValue);

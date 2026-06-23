@@ -6,7 +6,7 @@ package se.toel.ocpp.deviceEmulator.modes;
 
 import java.util.HashMap;
 import java.util.Map;
-import se.toel.ocpp.deviceEmulator.device.Device;
+import se.toel.ocpp.deviceEmulator.device.ocpp16.Device;
 import se.toel.ocpp.deviceEmulator.device.DeviceIF;
 import se.toel.ocpp.deviceEmulator.events.Event;
 import se.toel.ocpp.deviceEmulator.events.EventHandler;

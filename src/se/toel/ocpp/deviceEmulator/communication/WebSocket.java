@@ -1,12 +1,10 @@
 package se.toel.ocpp.deviceEmulator.communication;
 
 import java.net.URI;
-import java.util.Iterator;
 import org.java_websocket.client.WebSocketClient;
 import org.java_websocket.handshake.ServerHandshake;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import se.toel.util.Dev;
 
 
 /**

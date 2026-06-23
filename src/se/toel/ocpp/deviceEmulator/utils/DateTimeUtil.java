@@ -5,7 +5,6 @@
 package se.toel.ocpp.deviceEmulator.utils;
 
 import java.text.SimpleDateFormat;
-import java.time.ZonedDateTime;
 import java.util.Date;
 import java.util.TimeZone;
 import se.toel.util.Dev;
@@ -35,7 +34,7 @@ public class DateTimeUtil {
         boolean useUTC = true;
         
         if (useUTC) {
-            sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS"); // 2022-06-09T06:40:11.123
+            sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'"); // 2022-06-09T06:40:11.123
             sdf.setTimeZone(TimeZone.getTimeZone("GMT"));
         } else {
             sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ"); // 2022-06-09T06:40:11.123+05:30

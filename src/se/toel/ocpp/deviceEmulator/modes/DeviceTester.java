@@ -4,7 +4,7 @@
 
 package se.toel.ocpp.deviceEmulator.modes;
 
-import se.toel.ocpp.deviceEmulator.device.Device;
+import se.toel.ocpp.deviceEmulator.device.ocpp16.Device;
 import se.toel.ocpp.deviceEmulator.device.DeviceIF;
 import se.toel.ocpp.deviceEmulator.events.EventHandler;
 import se.toel.ocpp.deviceEmulator.events.EventIF;

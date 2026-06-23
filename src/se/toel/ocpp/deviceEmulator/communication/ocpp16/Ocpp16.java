@@ -1,13 +1,16 @@
 /*
  * The OCPP 1.6 implementation
  */
-package se.toel.ocpp.deviceEmulator.communication;
+package se.toel.ocpp.deviceEmulator.communication.ocpp16;
 
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import org.json.JSONArray;
 import org.json.JSONObject;
+import se.toel.ocpp.deviceEmulator.communication.CallbackIF;
+import se.toel.ocpp.deviceEmulator.communication.OcppIF;
+import se.toel.ocpp.deviceEmulator.communication.WebSocket;
 import se.toel.ocpp.deviceEmulator.events.Event;
 import se.toel.ocpp.deviceEmulator.events.EventHandler;
 import se.toel.ocpp.deviceEmulator.events.EventIds;

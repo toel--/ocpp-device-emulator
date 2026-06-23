@@ -2,7 +2,7 @@
  * Authorization Cache
  */
 
-package se.toel.ocpp.deviceEmulator.device.impl;
+package se.toel.ocpp.deviceEmulator.device.ocpp16;
 
 import java.util.Map;
 import org.json.JSONObject;

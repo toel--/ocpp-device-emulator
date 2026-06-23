@@ -2,12 +2,13 @@
  * Common parts for the OCPP implementation
  */
 
-package se.toel.ocpp.deviceEmulator.communication;
+package se.toel.ocpp.deviceEmulator.communication.ocpp16;
 
 import java.net.URI;
 import java.net.URISyntaxException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import se.toel.ocpp.deviceEmulator.communication.WebSocket;
 import se.toel.util.Dev;
 
 /**

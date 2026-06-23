@@ -5,6 +5,7 @@ package se.toel.ocpp.deviceEmulator.communication;
 
 import org.json.JSONObject;
 import org.junit.Test;
+import se.toel.ocpp.deviceEmulator.communication.ocpp16.Ocpp16;
 import static org.junit.Assert.*;
 
 /**

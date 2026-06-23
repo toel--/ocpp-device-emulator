@@ -4,6 +4,7 @@
 package se.toel.ocpp.deviceEmulator.device;
 
 import org.junit.Test;
+import se.toel.ocpp.deviceEmulator.device.ocpp16.Device;
 import static org.junit.Assert.*;
 
 /**

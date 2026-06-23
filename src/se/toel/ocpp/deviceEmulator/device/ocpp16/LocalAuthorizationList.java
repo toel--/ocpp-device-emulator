@@ -4,9 +4,10 @@
  * and open the template in the editor.
  */
 
-package se.toel.ocpp.deviceEmulator.device.impl;
+package se.toel.ocpp.deviceEmulator.device.ocpp16;
 
 import se.toel.collection.DataMap;
+import se.toel.ocpp.deviceEmulator.communication.ocpp16.Configuration;
 
 /**
  *

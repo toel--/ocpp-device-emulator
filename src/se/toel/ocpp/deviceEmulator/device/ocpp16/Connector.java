@@ -2,7 +2,7 @@
  * Connector class
  */
 
-package se.toel.ocpp.deviceEmulator.device.impl;
+package se.toel.ocpp.deviceEmulator.device.ocpp16;
 
 import org.json.JSONArray;
 import org.json.JSONObject;

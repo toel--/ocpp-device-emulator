@@ -3,8 +3,6 @@
  */
 package se.toel.ocpp.deviceEmulator.device;
 
-import se.toel.ocpp.deviceEmulator.device.ocpp16.Device;
-
 /**
  *
  * @author toel
@@ -18,7 +16,9 @@ public class DeviceFactory {
 
         switch (ocppVersion) {
             case "ocpp1.6":
-                return new Device(deviceId, url, ocppVersion);
+                return new se.toel.ocpp.deviceEmulator.device.ocpp16.Device(deviceId, url, ocppVersion);
+            case "ocpp2.0.1":
+                return new se.toel.ocpp.deviceEmulator.device.ocpp201.Device(deviceId, url, ocppVersion);
             default:
                 throw new IllegalArgumentException("Unsupported OCPP version: " + ocppVersion);
         }

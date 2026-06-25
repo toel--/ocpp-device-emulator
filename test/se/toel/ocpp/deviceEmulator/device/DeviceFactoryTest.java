@@ -22,4 +22,10 @@ public class DeviceFactoryTest {
     public void test02_rejectsUnknownVersion() {
         DeviceFactory.create("CP1", "ws://localhost:1/x", "ocpp9.9");
     }
+
+    @Test
+    public void test03_createsOcpp201Device() {
+        DeviceIF d = DeviceFactory.create("CP1", "ws://localhost:1/x", "ocpp2.0.1");
+        assertTrue(d instanceof se.toel.ocpp.deviceEmulator.device.ocpp201.Device);
+    }
 }

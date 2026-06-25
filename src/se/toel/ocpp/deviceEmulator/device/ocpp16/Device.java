@@ -30,6 +30,7 @@ import se.toel.ocpp.deviceEmulator.events.EventHandler;
 import se.toel.ocpp.deviceEmulator.events.EventIds;
 import se.toel.ocpp.deviceEmulator.utils.DateTimeUtil;
 import se.toel.ocpp.deviceEmulator.utils.FTP;
+import se.toel.ocpp.deviceEmulator.utils.MessageIdGenerator;
 import se.toel.util.Dev;
 import se.toel.util.FileUtils;
 import se.toel.util.StringUtil;
@@ -86,6 +87,7 @@ public class Device implements DeviceIF {
     private final OcppIF ocpp;
     private final Map<Long, String> scheduled = new ConcurrentHashMap<>();
     protected final Map<String, JSONArray> answers = new ConcurrentHashMap<>();
+    private final MessageIdGenerator msgIds = new MessageIdGenerator();
     
     // Auhorize stuff
     private static final String userId = "1";
@@ -188,7 +190,7 @@ public class Device implements DeviceIF {
         req.put("chargePointVendor", deviceData.getVendor());
         req.put("firmwareVersion", deviceData.getFirmwareVersion());
         
-        String msgId = Long.toHexString(now);
+        String msgId = msgIds.next();
         
         ocpp.sendReq(msgId, BOOT_NOTIFICATION, req);
         
@@ -245,7 +247,7 @@ public class Device implements DeviceIF {
             if (!connector.getVendorErrorCode().isEmpty()) req.put("vendorErrorCode", connector.getVendorErrorCode());                                          // Optional. This contains the vendor-specific error code.
         }
             
-        String msgId = Long.toHexString(now);
+        String msgId = msgIds.next();
         ocpp.sendReq(msgId, STATUS_NOTIFICATION, req);
         
         JSONArray json = waitForAnswer(msgId);
@@ -267,11 +269,10 @@ public class Device implements DeviceIF {
         eventMgr.trigger(EventIds.AUTORIZING, deviceId, userId);
         
         boolean accepted;
-        long now = System.currentTimeMillis();
         JSONObject req = new JSONObject();
         req.put("idTag", userId);
         
-        String msgId = Long.toHexString(now);
+        String msgId = msgIds.next();
         
         ocpp.sendReq(msgId , AUTHORIZE, req);
         
@@ -711,7 +712,7 @@ public class Device implements DeviceIF {
         
         eventMgr.trigger(EventIds.TRANSACTION_STOPPING, deviceId, req.toString());
         
-        String msgId = Long.toHexString(now);
+        String msgId = msgIds.next();
         ocpp.sendReq(msgId, STOP_TRANSACTION, req);
         
         JSONArray json = waitForAnswer(msgId);
@@ -944,7 +945,7 @@ public class Device implements DeviceIF {
         if (connector.getReservationId()>0) req.put("reservationId", connector.getReservationId());
         req.put("timestamp", DateTimeUtil.toIso8601(now));
         
-        String msgId = Long.toHexString(now);
+        String msgId = msgIds.next();
         ocpp.sendReq(msgId, START_TRANSACTION, req);
         
         // Get the conf and process it
@@ -1067,9 +1068,8 @@ public class Device implements DeviceIF {
     }
     
     private JSONArray doSimpleRequest(String type, JSONObject json) {
-        
-        long now = System.currentTimeMillis(); 
-        String msgId = Long.toHexString(now);
+
+        String msgId = msgIds.next();
         
         ocpp.sendReq(msgId, type, json);
         
@@ -1084,7 +1084,7 @@ public class Device implements DeviceIF {
         
         long now = System.currentTimeMillis();
         JSONObject req = new JSONObject();        
-        String msgId = Long.toHexString(now);
+        String msgId = msgIds.next();
         
         ocpp.sendReq(msgId, HEARTBEAT, req);
         
@@ -1215,9 +1215,8 @@ public class Device implements DeviceIF {
 
             if (ongoingFirmwareUpdate.getStatusHasChanged()) {
 
-                long now = System.currentTimeMillis();
-                JSONObject req = new JSONObject();        
-                String msgId = Long.toHexString(now);
+                JSONObject req = new JSONObject();
+                String msgId = msgIds.next();
                 req.put("status", ongoingFirmwareUpdate.getStatus());
                 ocpp.sendReq(msgId, FIRMWARE_STATUS_NOTIFICATION, req);
 

@@ -2,12 +2,12 @@
 
 OCPP device (charge point) emulator.
 
-Currently implements **OCPP 1.6**. The codebase is structured so additional
-protocol versions plug in as parallel modules: shared infrastructure (modes,
-events, transport, device contract) lives in the common packages, and the 1.6
-implementation lives under `communication/ocpp16` and `device/ocpp16`. The
-device version is selected at runtime via `DeviceFactory` from the
-`[ocppVersion]` argument.
+Implements **OCPP 1.6 and 2.0.1**, selected at runtime via `DeviceFactory` from
+the `[ocppVersion]` argument (`ocpp1.6` / `ocpp2.0.1`). Each protocol is a
+parallel module: shared infrastructure (modes, events, transport, the
+`DeviceIF`/`OcppIF`/`ConnectorIF` contracts) lives in the common packages, while
+the version-specific code lives under `communication/ocpp16` + `device/ocpp16`
+and `communication/ocpp201` + `device/ocpp201`.
 
 ## Run
 

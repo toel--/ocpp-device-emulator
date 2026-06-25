@@ -1,8 +1,8 @@
 # Design: merge OCPP 2.0.1 into the device emulator
 
 Date: 2026-06-22
-Status: Phase 1 (test harness + protocol abstraction, 1.6) COMPLETE. Phase 2 (integrate 2.0.1 as the
-ocpp201 module) pending — see Plan B.
+Status: COMPLETE. Phase 1 (test harness + protocol abstraction, 1.6) and Phase 2 (2.0.1 as the
+ocpp201 module) both done. Emulator runs OCPP 1.6 and 2.0.1 via DeviceFactory; 30 tests green.
 
 ## Goal
 

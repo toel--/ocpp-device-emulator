@@ -37,6 +37,8 @@ public class Connector extends DataMap implements ConnectorIF {
     public String lastStatus = STATUS_UNAVAILABLE;
     private JSONObject txDefaultProfile = null;
     private JSONObject txProfile = null;
+    private double requestedCurrent = 16;                    // current this connector would draw (A) absent any charge-point cap
+    private double chargePointMaxCurrent = -1;               // ceiling assigned from the charge-point budget (A); -1 = no cap
     
     public static final String 
             StopReason_EmergencyStop = "EmergencyStop",             // Emergency stop button was used.
@@ -187,11 +189,30 @@ public class Connector extends DataMap implements ConnectorIF {
        }
               
        processChargingProfile(csChargingProfiles);
-       
+
        return success;
-        
+
     }
-    
+
+    /** Assign the ceiling distributed from the charge-point wide budget (A); -1 removes it. */
+    public void setChargePointMaxCurrent(double ceiling) {
+
+       if (ceiling==chargePointMaxCurrent) return;          // unchanged: avoid re-toggling the charging status every tick
+       chargePointMaxCurrent = ceiling;
+       applyChargingCurrent(applyChargePointMax(requestedCurrent));
+
+    }
+
+    /** The current this connector wants to draw (A), before any charge-point cap. */
+    public double getRequestedCurrent() {
+       return requestedCurrent;
+    }
+
+    /** True when the connector is actively drawing (or wanting to draw) power. */
+    public boolean isDemanding() {
+       return STATUS_CHARGING.equals(getStatus()) || STATUS_SUSPENDEDEVSE.equals(getStatus());
+    }
+
     public boolean clearChargingProfile(String chargingProfilePurpose, int id, int stackLevel) {
      
         boolean success = false;
@@ -206,12 +227,12 @@ public class Connector extends DataMap implements ConnectorIF {
             if (id>0) {
                 if (txProfile.getInt("chargingProfileId")==id) {
                     txProfile = null;
-                    setChargingCurrent(16f);
+                    setRequestedCurrent(16);
                     success = true;
                 }
             } else {
                 txProfile = null;
-                setChargingCurrent(16f);
+                setRequestedCurrent(16);
                 success = true;
             }
         }
@@ -341,22 +362,44 @@ public class Connector extends DataMap implements ConnectorIF {
      **************************************************************************/
 
     private void processChargingProfile(JSONObject csChargingProfiles) {
-       
+
        // TODO: should be dependant on chargingRateUnit
-        
+
        JSONObject chargingSchedule = csChargingProfiles.getJSONObject("chargingSchedule");
        JSONObject chargingSchedulePeriod = chargingSchedule.getJSONArray("chargingSchedulePeriod").getJSONObject(0);
-       
+
        double current = chargingSchedulePeriod.getDouble("limit");
+       setRequestedCurrent(current);
+
+    }
+
+    /** Record the requested current and apply it through the charge-point ceiling. */
+    private void setRequestedCurrent(double current) {
+
+       requestedCurrent = current;
+       applyChargingCurrent(applyChargePointMax(current));
+
+    }
+
+    /** Set the charging current and move between Charging/SuspendedEVSE accordingly. */
+    private void applyChargingCurrent(double current) {
+
        setChargingCurrent(current);
-       
+
        switch (getStatus()) {
            case STATUS_SUSPENDEDEVSE: if (current>0) setStatus(STATUS_CHARGING); break;
            case STATUS_CHARGING: if (current<6) setStatus(STATUS_SUSPENDEDEVSE); break;
        }
-       
-       
+
     }
-       
-    
+
+    /** Clamp a requested current to the ceiling assigned from the charge-point budget, if any. */
+    private double applyChargePointMax(double current) {
+
+       if (chargePointMaxCurrent>=0 && current>chargePointMaxCurrent) return chargePointMaxCurrent;
+       return current;
+
+    }
+
+
 }

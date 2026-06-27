@@ -28,6 +28,7 @@ import se.toel.ocpp.deviceEmulator.communication.OcppIF;
 import se.toel.ocpp.deviceEmulator.events.Event;
 import se.toel.ocpp.deviceEmulator.events.EventHandler;
 import se.toel.ocpp.deviceEmulator.events.EventIds;
+import se.toel.ocpp.deviceEmulator.utils.ChargePointBudget;
 import se.toel.ocpp.deviceEmulator.utils.DateTimeUtil;
 import se.toel.ocpp.deviceEmulator.utils.FTP;
 import se.toel.ocpp.deviceEmulator.utils.MessageIdGenerator;
@@ -78,6 +79,9 @@ public class Device implements DeviceIF {
     // private final DataMap coreProfile = new DataMap();
     private int tickCount = 0;
     private final List<Connector> connectors = new ArrayList<>();
+    private JSONObject chargePointMaxProfile = null;             // ChargePointMaxProfile applied to the whole charge point
+    private double chargePointMaxCurrent = -1;                   // total charge-point budget in A; -1 = no cap
+    private static final double NOMINAL_VOLTAGE = 230;           // used to convert a W budget into an A budget
     private FirmwareUpdate ongoingFirmwareUpdate = null;
     private final DeviceData deviceData;
     private final LocalAuthorizationList localAuth;
@@ -381,6 +385,9 @@ public class Device implements DeviceIF {
 
         }
            
+        // Re-balance the charge-point budget as connectors start/stop drawing power
+        distributeChargePointBudget();
+
         // If a connector is charging, increase the meter
         for (Connector connector : connectors) {
             connector.tick();
@@ -530,19 +537,71 @@ public class Device implements DeviceIF {
         
         int connectorId = json.optInt("connectorId", 1);
         JSONObject csChargingProfiles = json.getJSONObject("csChargingProfiles");
-        
-        Connector connector = connectors.get(connectorId);
-        boolean success = connector.setChargingProfile(csChargingProfiles);
-        
+
+        boolean success;
+        if ("ChargePointMaxProfile".equals(csChargingProfiles.optString("chargingProfilePurpose"))) {
+            // Charge-point wide cap (connectorId 0): record the budget and split it across connectors.
+            chargePointMaxProfile = csChargingProfiles;
+            chargePointMaxCurrent = profileLimitInAmps(csChargingProfiles);
+            success = true;
+        } else {
+            Connector connector = connectors.get(connectorId);
+            success = connector.setChargingProfile(csChargingProfiles);
+        }
+        distributeChargePointBudget();
+
         if (success) {
             ocpp.sendResponse(msgId, jsonStatusAccepted);
-        } else {    
+        } else {
             ocpp.sendResponse(msgId, jsonStatusRejected);
         }
-        
-        
+
+
     }
-    
+
+    /** Split the charge-point wide budget across the connectors that want power. */
+    private void distributeChargePointBudget() {
+
+        if (chargePointMaxCurrent<0) {
+            for (Connector connector : connectors) connector.setChargePointMaxCurrent(-1);
+            return;
+        }
+
+        List<Connector> demanding = new ArrayList<>();
+        for (Connector connector : connectors) {
+            if (connector.isDemanding()) demanding.add(connector);
+            else connector.setChargePointMaxCurrent(-1);     // idle connectors draw nothing, leave them uncapped
+        }
+
+        double[] demands = new double[demanding.size()];
+        for (int i=0; i<demanding.size(); i++) demands[i] = demanding.get(i).getRequestedCurrent();
+
+        double[] grant = ChargePointBudget.split(demands, chargePointMaxCurrent);
+        for (int i=0; i<demanding.size(); i++) demanding.get(i).setChargePointMaxCurrent(grant[i]);
+
+    }
+
+    /** Drop the charge-point wide cap (optionally only when the profile id matches). */
+    private boolean clearChargePointMaxProfile(int id) {
+
+        if (chargePointMaxProfile==null) return true;
+        if (id>0 && chargePointMaxProfile.getInt("chargingProfileId")!=id) return false;
+        chargePointMaxProfile = null;
+        chargePointMaxCurrent = -1;
+        return true;
+
+    }
+
+    /** Read the (single-period) profile limit and convert it to amps. */
+    private double profileLimitInAmps(JSONObject csChargingProfiles) {
+
+        JSONObject chargingSchedule = csChargingProfiles.getJSONObject("chargingSchedule");
+        String unit = chargingSchedule.optString("chargingRateUnit", "A");
+        double limit = chargingSchedule.getJSONArray("chargingSchedulePeriod").getJSONObject(0).getDouble("limit");
+        return ChargePointBudget.limitToAmps(limit, unit, NOMINAL_VOLTAGE);
+
+    }
+
     public void doGetDiagnostics(String msgId, JSONObject json) {
      
         // 
@@ -838,8 +897,10 @@ public class Device implements DeviceIF {
         
         int stackLevel = json.optInt("stackLevel");
         // if (stackLevel>0) Dev.info("   Need to clear the charging profiles with stack level "+stackLevel);
-        
-        if (connectorId>0) {
+
+        if ("ChargePointMaxProfile".equals(chargingProfilePurpose)) {
+            success = clearChargePointMaxProfile(id);
+        } else if (connectorId>0) {
             Connector connector = connectors.get(connectorId);
             success = connector.clearChargingProfile(chargingProfilePurpose, id, stackLevel);
         } else {
@@ -847,7 +908,8 @@ public class Device implements DeviceIF {
                 success &= connector.clearChargingProfile(chargingProfilePurpose, id, stackLevel);
             }
         }
-        
+        distributeChargePointBudget();
+
         // Send confirmation
         if (success) {
             ocpp.sendResponse(msgId, jsonStatusAccepted);

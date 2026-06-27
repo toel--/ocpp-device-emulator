@@ -1217,10 +1217,10 @@ public class Device implements DeviceIF {
     }
         
     
-    /** wait for the answer for max 5s */
+    /** wait for the answer for max 2s (returns within ~10ms once it arrives) */
     private JSONArray waitForAnswer(String msgId) {
-        
-        int timeout = 500;
+
+        int timeout = 200;
         JSONArray answer = answers.get(msgId);
         
         while (--timeout>0 && answer==null) {

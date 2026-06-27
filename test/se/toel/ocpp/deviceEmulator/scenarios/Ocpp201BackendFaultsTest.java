@@ -25,7 +25,6 @@ public class Ocpp201BackendFaultsTest {
         DeviceIF device = DeviceFactory.create("CP201_ERR", "ws://localhost:18192/CP201_ERR", "ocpp2.0.1");
         device.start();
         cs.awaitReceived("BootNotification", 10000);
-        Thread.sleep(1000);
         assertShutsDownWithin(device, 10000);
         cs.stop();
     }
@@ -38,7 +37,6 @@ public class Ocpp201BackendFaultsTest {
         DeviceIF device = DeviceFactory.create("CP201_BAD", "ws://localhost:18193/CP201_BAD", "ocpp2.0.1");
         device.start();
         cs.awaitReceived("BootNotification", 10000);
-        Thread.sleep(1000);
         assertShutsDownWithin(device, 12000);
         cs.stop();
     }
@@ -51,7 +49,6 @@ public class Ocpp201BackendFaultsTest {
         DeviceIF device = DeviceFactory.create("CP201_DROP", "ws://localhost:18194/CP201_DROP", "ocpp2.0.1");
         device.start();
         cs.awaitReceived("BootNotification", 10000);
-        Thread.sleep(1000);
         assertShutsDownWithin(device, 10000);
         cs.stop();
     }

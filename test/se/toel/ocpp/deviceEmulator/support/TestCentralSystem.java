@@ -5,6 +5,10 @@
  * CALL frame ([2, msgId, action, payload]) a per-action handler decides how to
  * answer (CALLRESULT, CALLERROR, malformed text, nothing, or drop the socket).
  * All received frames are recorded so tests can assert on the device's traffic.
+ *
+ * It can also initiate CALLs to the device with {@link #sendCall} and wait for
+ * the matching CALLRESULT with {@link #awaitResult}, so tests can drive
+ * CS-initiated requests (SetChargingProfile, Reset, ...).
  */
 package se.toel.ocpp.deviceEmulator.support;
 
@@ -15,6 +19,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 import org.java_websocket.WebSocket;
 import org.java_websocket.handshake.ClientHandshake;
@@ -35,6 +40,8 @@ public class TestCentralSystem extends WebSocketServer {
     private final Map<String, Function<JSONArray, Reply>> handlers = new HashMap<>();
     private final List<JSONArray> received = new ArrayList<>();
     private final CountDownLatch startLatch = new CountDownLatch(1);
+    private final AtomicInteger callCounter = new AtomicInteger();
+    private volatile WebSocket connection;
 
     /***************************************************************************
      * Constructor
@@ -82,6 +89,45 @@ public class TestCentralSystem extends WebSocketServer {
         }
     }
 
+    /**
+     * Assert a CALL is NOT received within the window. Returns as soon as the window elapses
+     * (absence confirmed), but fails fast the instant a matching CALL arrives.
+     */
+    public void assertNotReceivedWithin(String action, long windowMs) throws InterruptedException {
+        long deadline = System.currentTimeMillis() + windowMs;
+        synchronized (received) {
+            while (true) {
+                if (findCall(action) != null) throw new AssertionError("Unexpected CALL '" + action + "' was received");
+                long remaining = deadline - System.currentTimeMillis();
+                if (remaining <= 0) return;
+                received.wait(remaining);
+            }
+        }
+    }
+
+    /** Send a CS-initiated CALL ([2, msgId, action, payload]) to the connected device; returns the msgId. */
+    public String sendCall(String action, JSONObject payload) {
+        WebSocket conn = connection;
+        if (conn == null) throw new IllegalStateException("No device connected to TestCentralSystem on port " + port);
+        String msgId = "cs-" + callCounter.incrementAndGet();
+        conn.send(new JSONArray().put(2).put(msgId).put(action).put(payload).toString());
+        return msgId;
+    }
+
+    /** Wait for the CALLRESULT ([3, msgId, payload]) the device returns for a {@link #sendCall}, and return its payload. */
+    public JSONObject awaitResult(String msgId, long timeoutMs) throws InterruptedException {
+        long deadline = System.currentTimeMillis() + timeoutMs;
+        synchronized (received) {
+            while (true) {
+                JSONArray found = findResult(msgId);
+                if (found != null) return found.getJSONObject(2);
+                long remaining = deadline - System.currentTimeMillis();
+                if (remaining <= 0) throw new AssertionError("Timed out waiting for CALLRESULT '" + msgId + "' after " + timeoutMs + "ms");
+                received.wait(remaining);
+            }
+        }
+    }
+
     @Override
     public void onStart() {
         startLatch.countDown();
@@ -89,7 +135,7 @@ public class TestCentralSystem extends WebSocketServer {
 
     @Override
     public void onOpen(WebSocket conn, ClientHandshake handshake) {
-        // nothing to do
+        connection = conn;
     }
 
     @Override
@@ -124,6 +170,13 @@ public class TestCentralSystem extends WebSocketServer {
     private JSONArray findCall(String action) {
         for (JSONArray frame : received) {
             if (frame.getInt(0) == 2 && action.equals(frame.getString(2))) return frame;
+        }
+        return null;
+    }
+
+    private JSONArray findResult(String msgId) {
+        for (JSONArray frame : received) {
+            if (frame.getInt(0) == 3 && msgId.equals(frame.getString(1))) return frame;
         }
         return null;
     }

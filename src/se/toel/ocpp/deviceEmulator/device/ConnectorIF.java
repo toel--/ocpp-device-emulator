@@ -11,4 +11,8 @@ public interface ConnectorIF {
 
     int getTransactionId();
 
+    String getStatus();
+
+    double getChargingCurrent();
+
 }

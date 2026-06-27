@@ -29,11 +29,9 @@ public class Ocpp16BackendFaultsTest {
         device.start();
 
         cs.awaitReceived("BootNotification", 10000);
-        Thread.sleep(2000);
-        // A CALLERROR boot is not an acceptance, so the device must not authorize.
-        for (JSONArray f : cs.getReceived()) {
-            if (f.getInt(0) == 2) assertNotEquals("Authorize", f.getString(2));
-        }
+        // A CALLERROR boot is not an acceptance, so the device must not authorize (would be ~1-2s
+        // later if it wrongly did); fail fast if Authorize arrives, else confirm its absence.
+        cs.assertNotReceivedWithin("Authorize", 2500);
         assertShutsDownWithin(device, 10000);
         cs.stop();
     }
@@ -48,8 +46,8 @@ public class Ocpp16BackendFaultsTest {
         device.start();
 
         cs.awaitReceived("BootNotification", 10000);
-        Thread.sleep(1000);
-        // The malformed reply must not crash or hang the device.
+        // The malformed reply (sent by the CS on receipt of the boot) must not crash or hang the
+        // device; shutting down cleanly is the assertion, no fixed settle needed.
         assertShutsDownWithin(device, 12000);
         cs.stop();
     }
@@ -64,8 +62,7 @@ public class Ocpp16BackendFaultsTest {
         device.start();
 
         cs.awaitReceived("BootNotification", 10000);
-        Thread.sleep(1000);
-        // onClose must run and shutdown must not hang.
+        // The dropped socket must be handled (onClose) and shutdown must not hang.
         assertShutsDownWithin(device, 10000);
         cs.stop();
     }

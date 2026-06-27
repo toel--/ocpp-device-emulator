@@ -4,6 +4,10 @@
 
 package se.toel.ocpp.deviceEmulator.communication.ocpp16;
 
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 import se.toel.collection.DataMap;
 
 /**
@@ -15,14 +19,15 @@ public class Configuration extends DataMap {
     /***************************************************************************
      * Constants and variables
      **************************************************************************/
-    
-    
+    private final Set<String> knownKeys;
+
+
      /***************************************************************************
      * Constructor
      **************************************************************************/
     @SuppressWarnings("OverridableMethodCallInConstructor")
     public Configuration() {
-        
+
         // Default values
         _set("AuthorizeRemoteTxRequests", false);
         _set("AuthorizationCacheEnabled", true);                            // If this key exists, the Charge Point supports an Authorization Cache. If this key reports a value of true, the Authorization Cache is enabled.
@@ -36,6 +41,13 @@ public class Configuration extends DataMap {
         _set("ChargeProfileMaxStackLevel", 3);                              // Max StackLevel of a ChargingProfile. The number defined also indicates the max allowed number of installed charging schedules per Charging Profile Purposes.
         _set("MeterValuesSampledData", "Energy.Active.Import.Register");    // Sampled measurands to be included in a MeterValues.req PDU, every MeterValueSampleInterval seconds. Where applicable, the Measurand is combined with the optional phase; for instance: Voltage.L1 Default: "Energy.Active.Import.Register"
         _set("CurrentMaxAssignment", 16);                                   // CTEK specific: Max current
+
+        // Snapshot the keys we recognise (the defaults above plus the conditionally-supported
+        // AuthorizationKey) so ChangeConfiguration can answer NotSupported for anything else.
+        Set<String> keys = new HashSet<>();
+        for (Map.Entry<String, String> entry : entrySet()) keys.add(entry.getKey());
+        keys.add("AuthorizationKey");
+        knownKeys = Collections.unmodifiableSet(keys);
     }
     
      /***************************************************************************
@@ -44,9 +56,18 @@ public class Configuration extends DataMap {
     public int getInt(String key) {
         return _getInt(key);
     }
+
+    /** True if {@code key} is a configuration key this Charge Point recognises. */
+    public boolean isKnownKey(String key) {
+        return knownKeys.contains(key);
+    }
     
     public int getMeterValueSampleInterval() {
         return _getInt("MeterValueSampleInterval");
+    }
+
+    public String getMeterValuesSampledData() {
+        return get("MeterValuesSampledData");
     }
     
     public int getCurrentMaxAssignment() {

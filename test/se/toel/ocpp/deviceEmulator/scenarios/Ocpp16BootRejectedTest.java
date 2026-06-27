@@ -30,13 +30,13 @@ public class Ocpp16BootRejectedTest {
         device.start();
 
         cs.awaitReceived("BootNotification", 10000);
-        Thread.sleep(3000); // give the device time to (wrongly) proceed, if it would
 
+        // On an accepted boot the device would Authorize ~1-2s later (scheduled at +1s, run on
+        // the 1s tick); this fails the instant such an Authorize arrives, else confirms absence.
+        cs.assertNotReceivedWithin("Authorize", 2500);
         for (JSONArray f : cs.getReceived()) {
             if (f.getInt(0) == 2) {
-                String action = f.getString(2);
-                assertNotEquals("device proceeded to Authorize despite rejected boot", "Authorize", action);
-                assertNotEquals("device opened a transaction despite rejected boot", "StartTransaction", action);
+                assertNotEquals("device opened a transaction despite rejected boot", "StartTransaction", f.getString(2));
             }
         }
 

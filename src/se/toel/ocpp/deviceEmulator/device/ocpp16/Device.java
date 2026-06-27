@@ -727,7 +727,19 @@ public class Device implements DeviceIF {
             ocpp.sendResponse(msgId, jsonStatusNotSupported);
             return;
         }
-        
+
+        // Reject unknown configuration keys outright.
+        if (!config.isKnownKey(key)) {
+            ocpp.sendResponse(msgId, jsonStatusNotSupported);
+            return;
+        }
+
+        // Reject a sampled-data list that asks for measurands we cannot produce (e.g. SoC).
+        if (key.equals("MeterValuesSampledData") && !Connector.areMeasurandsSupported(value)) {
+            ocpp.sendResponse(msgId, jsonStatusRejected);
+            return;
+        }
+
         config.set(key, value);
         
         // Send confirmation (Accepted, Rejected, RebootRequired, NotSupported)
@@ -745,7 +757,7 @@ public class Device implements DeviceIF {
                         
         JSONArray transactionData = null;
         if (config.getMeterValueSampleInterval()>0) {
-            transactionData = connector.getMeterValues();
+            transactionData = connector.getMeterValues(config.getMeterValuesSampledData());
         }
         
         int transactionId = connector.getTransactionId();
@@ -1105,7 +1117,7 @@ public class Device implements DeviceIF {
         JSONObject json = new JSONObject();
         json.put("connectorId", connector.getId());
         json.put("transactionId", connector.getTransactionId());
-        json.put("meterValue", connector.getMeterValues());
+        json.put("meterValue", connector.getMeterValues(config.getMeterValuesSampledData()));
         
         scheduled.put(System.currentTimeMillis()+1, METER_VALUES+" "+json.toString());
         
@@ -1222,10 +1234,10 @@ public class Device implements DeviceIF {
     }
         
     
-    /** wait for the answer for max 5s */
+    /** wait for the answer for max 2s (returns within ~10ms once it arrives) */
     private JSONArray waitForAnswer(String msgId) {
-        
-        int timeout = 500;
+
+        int timeout = 200;
         JSONArray answer = answers.get(msgId);
         
         while (--timeout>0 && answer==null) {

@@ -4,6 +4,12 @@
 
 package se.toel.ocpp.deviceEmulator.device.ocpp16;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Set;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import se.toel.collection.DataMap;
@@ -63,8 +69,20 @@ public class Connector extends DataMap implements ConnectorIF {
             STATUS_RESERVED = "Reserved",
             STATUS_UNAVAILABLE = "Unavailable",
             STATUS_FAULTED = "Faulted";
-    
-    
+
+    public static final String
+            MEASURAND_ENERGY = "Energy.Active.Import.Register",
+            MEASURAND_POWER = "Power.Active.Import",
+            MEASURAND_CURRENT = "Current.Import",
+            MEASURAND_VOLTAGE = "Voltage";
+
+    /** The MeterValues measurands this emulator can actually produce. */
+    public static final Set<String> SUPPORTED_MEASURANDS = Collections.unmodifiableSet(new LinkedHashSet<>(
+            Arrays.asList(MEASURAND_ENERGY, MEASURAND_POWER, MEASURAND_CURRENT, MEASURAND_VOLTAGE)));
+
+    private static final double METER_VOLTAGE = 230.1;          // reported phase voltage
+
+
      /***************************************************************************
      * Constructor
      **************************************************************************/
@@ -240,101 +258,49 @@ public class Connector extends DataMap implements ConnectorIF {
         
     }
     
-    public JSONArray getMeterValues() {
-     
+    public JSONArray getMeterValues(String measurands) {
+
         JSONArray meterValues = new JSONArray();
         JSONObject meterValue = new JSONObject();           // Required. The sampled meter values with timestamps.
         meterValue.put("timestamp", DateTimeUtil.toIso8601(System.currentTimeMillis()));
         JSONArray sampledValues = new JSONArray();
-        
-        double voltage = 230.1;
-        
-        JSONObject sampledValue = new JSONObject();
-        sampledValue.put("context", "Sample.Periodic");                 // Should be Trigger on trigger message
-        sampledValue.put("format", "Raw");
-        sampledValue.put("measurand", "Energy.Active.Import.Register");
-        sampledValue.put("value", String.valueOf(getMeterWh()));            // Send Wh value as string
-        sampledValue.put("location", "Outlet");
-        sampledValue.put("unit", "Wh");
-        sampledValues.put(sampledValue);
-        
-        sampledValue = new JSONObject();
-        sampledValue.put("context", "Sample.Periodic");                 // Should be Trigger on trigger message
-        // sampledValue.put("format", "Raw");
-        sampledValue.put("measurand", "Power.Active.Import");
-        sampledValue.put("value", Math.round(getChargingCurrent()*voltage));            // Send rounded values for W
-        sampledValue.put("location", "Outlet");
-        sampledValue.put("unit", "W");
-        sampledValues.put(sampledValue);
-        
-        sampledValue = new JSONObject();
-        sampledValue.put("context", "Sample.Periodic");                 // Should be Trigger on trigger message
-        // sampledValue.put("format", "Raw");
-        sampledValue.put("measurand", "Power.Active.Import");
-        sampledValue.put("value", Math.round(getChargingCurrent()*voltage));            // Send rounded values for W
-        sampledValue.put("location", "Outlet");
-        sampledValue.put("unit", "W");
-        sampledValues.put(sampledValue);
-        
-        sampledValue = new JSONObject();
-        sampledValue.put("context", "Sample.Periodic");                 // Should be Trigger on trigger message
-        sampledValue.put("measurand", "Current.Import");
-        sampledValue.put("value", getChargingCurrent()/3);
-        sampledValue.put("location", "Outlet");
-        sampledValue.put("phase", "L1");
-        sampledValue.put("unit", "A");
-        sampledValues.put(sampledValue);
-        
-        sampledValue = new JSONObject();
-        sampledValue.put("context", "Sample.Periodic");                 // Should be Trigger on trigger message
-        sampledValue.put("measurand", "Current.Import");
-        sampledValue.put("value", getChargingCurrent()/3);
-        sampledValue.put("location", "Outlet");
-        sampledValue.put("phase", "L2");
-        sampledValue.put("unit", "A");
-        sampledValues.put(sampledValue);
-        
-        sampledValue = new JSONObject();
-        sampledValue.put("context", "Sample.Periodic");                 // Should be Trigger on trigger message
-        sampledValue.put("measurand", "Current.Import");
-        sampledValue.put("value", getChargingCurrent()/3);
-        sampledValue.put("location", "Outlet");
-        sampledValue.put("phase", "L3");
-        sampledValue.put("unit", "A");
-        sampledValues.put(sampledValue);
-                        
-        sampledValue = new JSONObject();
-        sampledValue.put("context", "Sample.Periodic");                 // Should be Trigger on trigger message
-        sampledValue.put("measurand", "Voltage");
-        sampledValue.put("value", String.valueOf(voltage));
-        sampledValue.put("location", "Outlet");
-        sampledValue.put("phase", "L1");
-        sampledValue.put("unit", "V");
-        sampledValues.put(sampledValue);
-        
-        sampledValue = new JSONObject();
-        sampledValue.put("context", "Sample.Periodic");                 // Should be Trigger on trigger message
-        sampledValue.put("measurand", "Voltage");
-        sampledValue.put("value", String.valueOf(voltage));
-        sampledValue.put("location", "Outlet");
-        sampledValue.put("phase", "L2");
-        sampledValue.put("unit", "V");
-        sampledValues.put(sampledValue);
-        
-        sampledValue = new JSONObject();
-        sampledValue.put("context", "Sample.Periodic");                 // Should be Trigger on trigger message
-        sampledValue.put("measurand", "Voltage");
-        sampledValue.put("value", String.valueOf(voltage));
-        sampledValue.put("location", "Outlet");
-        sampledValue.put("phase", "L3");
-        sampledValue.put("unit", "V");
-        sampledValues.put(sampledValue);
-        
+
+        // Emit only the configured measurands we actually support, in the requested order.
+        for (String measurand : splitMeasurands(measurands)) {
+            switch (measurand) {
+                case MEASURAND_ENERGY: {
+                    JSONObject energy = sample(MEASURAND_ENERGY, String.valueOf(getMeterWh()), "Wh");
+                    energy.put("format", "Raw");
+                    sampledValues.put(energy);
+                    break;
+                }
+                case MEASURAND_POWER:
+                    sampledValues.put(sample(MEASURAND_POWER, Math.round(getChargingCurrent()*METER_VOLTAGE), "W"));
+                    break;
+                case MEASURAND_CURRENT:
+                    addPerPhase(sampledValues, MEASURAND_CURRENT, getChargingCurrent()/3, "A");
+                    break;
+                case MEASURAND_VOLTAGE:
+                    addPerPhase(sampledValues, MEASURAND_VOLTAGE, String.valueOf(METER_VOLTAGE), "V");
+                    break;
+            }
+        }
+
         meterValue.put("sampledValue", sampledValues);
         meterValues.put(meterValue);
-        
+
         return meterValues;
-        
+
+    }
+
+    /** True only if every measurand in the comma-separated list is one we can produce. */
+    public static boolean areMeasurandsSupported(String measurands) {
+
+        for (String measurand : splitMeasurands(measurands)) {
+            if (!SUPPORTED_MEASURANDS.contains(measurand)) return false;
+        }
+        return true;
+
     }
     
     // Will be called every seconds
@@ -360,6 +326,40 @@ public class Connector extends DataMap implements ConnectorIF {
     /***************************************************************************
      * Private methods
      **************************************************************************/
+
+    private static List<String> splitMeasurands(String measurands) {
+
+       List<String> list = new ArrayList<>();
+       if (measurands==null) return list;
+       for (String part : measurands.split(",")) {
+           String measurand = part.trim();
+           if (!measurand.isEmpty()) list.add(measurand);
+       }
+       return list;
+
+    }
+
+    private JSONObject sample(String measurand, Object value, String unit) {
+
+       JSONObject sampledValue = new JSONObject();
+       sampledValue.put("context", "Sample.Periodic");      // Should be Trigger on a trigger message
+       sampledValue.put("measurand", measurand);
+       sampledValue.put("value", value);
+       sampledValue.put("location", "Outlet");
+       sampledValue.put("unit", unit);
+       return sampledValue;
+
+    }
+
+    private void addPerPhase(JSONArray out, String measurand, Object value, String unit) {
+
+       for (String phase : new String[]{"L1", "L2", "L3"}) {
+           JSONObject sampledValue = sample(measurand, value, unit);
+           sampledValue.put("phase", phase);
+           out.put(sampledValue);
+       }
+
+    }
 
     private void processChargingProfile(JSONObject csChargingProfiles) {
 

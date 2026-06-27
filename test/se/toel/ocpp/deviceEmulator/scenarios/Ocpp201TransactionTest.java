@@ -36,10 +36,10 @@ public class Ocpp201TransactionTest {
         DeviceIF device = DeviceFactory.create("CP201_TX", "ws://localhost:18191/CP201_TX", "ocpp2.0.1");
         device.start();
 
+        // Receiving the BootNotification proves the socket is up and round-tripping. 2.0.1 emits
+        // nothing else after boot (no auto-Authorize, no StatusNotification) and doStartTransaction
+        // does not gate on boot, so we can drive the transaction straight away.
         cs.awaitReceived("BootNotification", 10000);
-        // 2.0.1 does not auto-Authorize after boot (unlike 1.6); just let the
-        // device settle as connected + booted before driving the transaction.
-        Thread.sleep(2000);
 
         assertTrue("StartTransaction should succeed", device.doStartTransaction(1, "TAG201"));
         JSONArray start = cs.awaitReceived("StartTransaction", 10000);

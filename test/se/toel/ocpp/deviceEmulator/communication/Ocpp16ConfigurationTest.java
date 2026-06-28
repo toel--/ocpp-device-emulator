@@ -23,6 +23,20 @@ public class Ocpp16ConfigurationTest {
     }
 
     @Test
+    public void meterValuesSampledDataMaxLengthIsReported() {
+        Configuration c = new Configuration();
+        assertTrue(c.isKnownKey("MeterValuesSampledDataMaxLength"));
+        assertEquals("99", c.get("MeterValuesSampledDataMaxLength"));
+    }
+
+    @Test
+    public void chargingScheduleAllowedChargingRateUnitIsReported() {
+        Configuration c = new Configuration();
+        assertTrue(c.isKnownKey("ChargingScheduleAllowedChargingRateUnit"));
+        assertEquals("Current,Power", c.get("ChargingScheduleAllowedChargingRateUnit"));
+    }
+
+    @Test
     public void unknownKeysAreNotRecognised() {
         Configuration c = new Configuration();
         assertFalse(c.isKnownKey("FooBar"));

@@ -709,7 +709,7 @@ public class Device implements DeviceIF {
             return;
         }
         
-        if (doTakeTimeToAnswerChangeConfigurationLightIntensity) {
+        if (doTakeTimeToAnswerChangeConfigurationLightIntensity && key.endsWith("LightIntensity")) {
             Dev.sleep((int)(Math.random()*2000));
         }
         

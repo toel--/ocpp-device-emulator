@@ -19,7 +19,22 @@ public class Ocpp16ConfigurationTest {
         assertTrue(c.isKnownKey("MeterValueSampleInterval"));
         assertTrue(c.isKnownKey("MeterValuesSampledData"));
         assertTrue(c.isKnownKey("NumberOfConnectors"));
+        // Core/profile keys added in the full OCPP 1.6 sweep
+        assertTrue(c.isKnownKey("ConnectionTimeOut"));
+        assertTrue(c.isKnownKey("HeartbeatInterval"));
+        assertTrue(c.isKnownKey("ResetRetries"));
+        assertTrue(c.isKnownKey("MaxChargingProfilesInstalled"));
         assertTrue("AuthorizationKey is conditionally supported but still recognised", c.isKnownKey("AuthorizationKey"));
+    }
+
+    @Test
+    public void readOnlyKeysAreFlagged() {
+        Configuration c = new Configuration();
+        assertTrue(c.isReadOnly("NumberOfConnectors"));
+        assertTrue(c.isReadOnly("ChargingScheduleAllowedChargingRateUnit"));
+        assertTrue(c.isReadOnly("SupportedFeatureProfiles"));
+        assertFalse("writable keys are not read-only", c.isReadOnly("MeterValueSampleInterval"));
+        assertFalse(c.isReadOnly("MeterValuesSampledData"));
     }
 
     @Test

@@ -35,6 +35,9 @@ public class Ocpp16ChangeConfigurationTest {
         String unknown = cs.sendCall("ChangeConfiguration", new JSONObject().put("key", "FooBar").put("value", "1"));
         assertEquals("NotSupported", cs.awaitResult(unknown, 10000).getString("status"));
 
+        String readOnly = cs.sendCall("ChangeConfiguration", new JSONObject().put("key", "NumberOfConnectors").put("value", "2"));
+        assertEquals("Rejected", cs.awaitResult(readOnly, 10000).getString("status"));
+
         String known = cs.sendCall("ChangeConfiguration", new JSONObject().put("key", "MeterValueSampleInterval").put("value", "10"));
         assertEquals("Accepted", cs.awaitResult(known, 10000).getString("status"));
 

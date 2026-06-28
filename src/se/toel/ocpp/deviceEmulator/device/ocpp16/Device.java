@@ -666,9 +666,10 @@ public class Device implements DeviceIF {
             // Return all known
             for (Map.Entry<String, String> entry : config.entrySet()) {
                 if ("AuthorizationKey".equals(entry.getKey())) continue;            // Hide this one
+                if (entry.getKey().startsWith("_")) continue;                       // internal, non-OCPP keys
                 JSONObject o = new JSONObject();
                 o.put("key", entry.getKey());
-                o.put("readonly", false);           // TODO: make this configurable
+                o.put("readonly", config.isReadOnly(entry.getKey()));
                 o.put("value", entry.getValue());
                 configurationKeys.put(o);
             }
@@ -682,7 +683,7 @@ public class Device implements DeviceIF {
                 } else {
                     JSONObject entry = new JSONObject();
                     entry.put("key", key);
-                    entry.put("readonly", false);           // TODO: make this configurable
+                    entry.put("readonly", config.isReadOnly(key));
                     entry.put("value", value);
                     configurationKeys.put(entry);
                 }
@@ -731,6 +732,12 @@ public class Device implements DeviceIF {
         // Reject unknown configuration keys outright.
         if (!config.isKnownKey(key)) {
             ocpp.sendResponse(msgId, jsonStatusNotSupported);
+            return;
+        }
+
+        // Reject attempts to change a read-only key.
+        if (config.isReadOnly(key)) {
+            ocpp.sendResponse(msgId, jsonStatusRejected);
             return;
         }
 

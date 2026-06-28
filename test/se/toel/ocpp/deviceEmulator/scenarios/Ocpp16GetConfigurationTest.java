@@ -47,6 +47,12 @@ public class Ocpp16GetConfigurationTest {
         assertEquals("Current,Power", valueOf(configurationKey, "ChargingScheduleAllowedChargingRateUnit"));
         assertFalse("nothing should be unknown", result.has("unknownKey"));
 
+        // Read-only keys must be flagged as such; writable ones must not.
+        assertTrue(readonlyOf(configurationKey, "MeterValuesSampledDataMaxLength"));
+        assertTrue(readonlyOf(configurationKey, "ChargingScheduleAllowedChargingRateUnit"));
+        assertTrue(readonlyOf(configurationKey, "NumberOfConnectors"));
+        assertFalse(readonlyOf(configurationKey, "MeterValuesSampledData"));
+
         device.shutdown();
         cs.stop();
     }
@@ -57,5 +63,13 @@ public class Ocpp16GetConfigurationTest {
             if (key.equals(o.getString("key"))) return o.getString("value");
         }
         return null;
+    }
+
+    private boolean readonlyOf(JSONArray configurationKey, String key) {
+        for (int i = 0; i < configurationKey.length(); i++) {
+            JSONObject o = configurationKey.getJSONObject(i);
+            if (key.equals(o.getString("key"))) return o.getBoolean("readonly");
+        }
+        throw new AssertionError("key not present: " + key);
     }
 }

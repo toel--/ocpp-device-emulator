@@ -25,4 +25,12 @@ public class DeviceFactory {
 
     }
 
+    /** Create a 1.6 device exposing the sim-specific API. Only OCPP 1.6 is supported. */
+    public static SimDeviceIF createSimDevice(String deviceId, String url) {
+        se.toel.ocpp.deviceEmulator.device.ocpp16.Device device =
+                new se.toel.ocpp.deviceEmulator.device.ocpp16.Device(deviceId, url, "ocpp1.6");
+        device.setAutoPlugin(false);    // the simulation drives plug/unplug + status explicitly
+        return device;
+    }
+
 }

@@ -97,6 +97,79 @@ public class Ocpp16ChargingProfileTest {
         assertTrue(c.isDemanding());
     }
 
+    @Test
+    public void test10_vehicleCurrentIsDeliveredWhenNoCap() {
+        Connector c = new Connector(10, STORE);
+        c.setStatus(Connector.STATUS_CHARGING);
+        c.setVehicleCurrent(90);                       // ~20.7 kW summed
+        assertEquals(90, c.getChargingCurrent(), 0.01);
+    }
+
+    @Test
+    public void test11_chargePointMaxClampsVehicleCurrent() {
+        Connector c = new Connector(11, STORE);
+        c.setStatus(Connector.STATUS_CHARGING);
+        c.setVehicleCurrent(90);
+        c.setChargePointMaxCurrent(40);                // backend budget share caps it
+        assertEquals(40, c.getChargingCurrent(), 0.01);
+    }
+
+    @Test
+    public void test12_vehicleActiveDoesNotAutoFlipStatusWhenLow() {
+        // With a vehicle active the session owns status: a low/zero current must NOT flip to SuspendedEVSE.
+        Connector c = new Connector(12, STORE);
+        c.setStatus(Connector.STATUS_CHARGING);
+        c.setVehicleCurrent(3);                         // below the legacy <6 sum threshold
+        assertEquals(3, c.getChargingCurrent(), 0.01);
+        assertEquals("vehicle active: status untouched", Connector.STATUS_CHARGING, c.getStatus());
+    }
+
+    @Test
+    public void test13_multiPeriodScheduleAdvancesOverTime() {
+        Connector c = new Connector(13, STORE);
+        c.setStatus(Connector.STATUS_CHARGING);
+        c.setVehicleCurrent(90);                        // EV wants 90 A
+
+        // TxProfile: 0 A for the first 60 s, then 20 A (no transaction -> reference is profile-apply time)
+        JSONObject period0 = new JSONObject().put("startPeriod", 0).put("limit", 0);
+        JSONObject period1 = new JSONObject().put("startPeriod", 60).put("limit", 20);
+        JSONObject schedule = new JSONObject().put("chargingRateUnit", "A")
+                .put("chargingSchedulePeriod", new JSONArray().put(period0).put(period1));
+        JSONObject profile = new JSONObject().put("chargingProfileId", 1).put("stackLevel", 0)
+                .put("chargingProfilePurpose", "TxProfile").put("chargingProfileKind", "Absolute")
+                .put("chargingSchedule", schedule);
+        c.setChargingProfile(profile);
+
+        assertEquals("first period limits to 0 A", 0, c.getChargingCurrent(), 0.01);
+
+        c.tickSchedule(System.currentTimeMillis() + 65000);   // 65 s later
+        assertEquals("schedule advances to 20 A after 60 s", 20, c.getChargingCurrent(), 0.01);
+    }
+
+    @Test
+    public void test14_scheduleUsesTransactionStartAsReference() {
+        Connector c = new Connector(14, STORE);
+        c.setStatus(Connector.STATUS_CHARGING);
+        c.setVehicleCurrent(90);
+        c.setTransactionId(1);                          // starts the schedule clock (transaction reference)
+
+        // delayed start: 0 A for 60 s, then 20 A
+        JSONObject period0 = new JSONObject().put("startPeriod", 0).put("limit", 0);
+        JSONObject period1 = new JSONObject().put("startPeriod", 60).put("limit", 20);
+        JSONObject schedule = new JSONObject().put("chargingRateUnit", "A")
+                .put("chargingSchedulePeriod", new JSONArray().put(period0).put(period1));
+        JSONObject profile = new JSONObject().put("chargingProfileId", 101).put("stackLevel", 0)
+                .put("chargingProfilePurpose", "TxProfile").put("chargingProfileKind", "Absolute")
+                .put("transactionId", 1)
+                .put("chargingSchedule", schedule);
+        c.setChargingProfile(profile);
+
+        assertEquals("delayed start: 0 A in the first period", 0, c.getChargingCurrent(), 0.01);
+
+        c.tickSchedule(System.currentTimeMillis() + 65000);    // 65 s into the transaction
+        assertEquals("resumes to 20 A after 60 s", 20, c.getChargingCurrent(), 0.01);
+    }
+
     /***************************************************************************
      * Helpers
      **************************************************************************/

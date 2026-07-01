@@ -5,6 +5,7 @@ package se.toel.ocpp.deviceEmulator;
 
 import java.net.URISyntaxException;
 import se.toel.ocpp.deviceEmulator.modes.ApplicationModeIF;
+import se.toel.ocpp.deviceEmulator.modes.ChargingSimulator;
 import se.toel.ocpp.deviceEmulator.modes.DeviceEmulator;
 import se.toel.ocpp.deviceEmulator.modes.DeviceTester;
 import se.toel.ocpp.deviceEmulator.modes.DeviceWatcher;
@@ -32,6 +33,18 @@ public class Main {
                 break;
             case "tester":
                 mode = new DeviceTester();
+                break;
+            case "simulator":
+                if (args.length<3) showSyntaxAndExit();
+                if (!args[2].startsWith("ws")) {
+                    System.out.println("Error: expected 'simulator [deviceId] [wsUrl] [ocppVersion?]' — the 3rd argument must be a ws:// or wss:// URL (got '"+args[2]+"').");
+                    showSyntaxAndExit();
+                }
+                if (args.length>=4 && !"ocpp1.6".equals(args[3])) {
+                    System.out.println("Error: the charging simulator only supports ocpp1.6 for now (got '"+args[3]+"').");
+                    showSyntaxAndExit();
+                }
+                mode = new ChargingSimulator(args[1], args[2]);
                 break;
             default:
                 if (args.length<3) showSyntaxAndExit();
@@ -63,6 +76,9 @@ public class Main {
         System.out.println("  where");
         System.out.println("     [deviceId] is the device id to use");
         System.out.println("                'watcher' to enable the watcher mode, see documentation for configuration");
+        System.out.println("                'simulator [deviceId] [wsUrl] [ocppVersion?]' to loop two vehicles charging");
+        System.out.println("                   e.g. simulator macstudio ws://10.0.1.35:9000/ocpp");
+        System.out.println("                   (connects to [wsUrl]/[deviceId]; ocppVersion is optional and only ocpp1.6 is supported)");
         System.out.println("     [url] is the url of the backend server endpoint");
         System.out.println("     [ocppVersion] the OCPP version to use (only ocpp1.6 is supported for now)");
         System.exit(1);

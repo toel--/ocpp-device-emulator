@@ -14,6 +14,7 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 import se.toel.collection.DataMap;
 import se.toel.ocpp.deviceEmulator.device.ConnectorIF;
+import se.toel.ocpp.deviceEmulator.utils.ChargingScheduleUtil;
 import se.toel.ocpp.deviceEmulator.utils.DateTimeUtil;
 
 /**
@@ -45,6 +46,9 @@ public class Connector extends DataMap implements ConnectorIF {
     private JSONObject txProfile = null;
     private double requestedCurrent = 16;                    // current this connector would draw (A) absent any charge-point cap
     private double chargePointMaxCurrent = -1;               // ceiling assigned from the charge-point budget (A); -1 = no cap
+    private double vehicleCurrent = -1;                      // EV desired current (3-phase sum, A); -1 = no vehicle
+    private long profileStartMs = 0;                         // when the active Tx/TxDefault profile was applied
+    private long transactionStartMs = 0;                     // when the current transaction started (schedule time reference)
     
     public static final String 
             StopReason_EmergencyStop = "EmergencyStop",             // Emergency stop button was used.
@@ -123,6 +127,7 @@ public class Connector extends DataMap implements ConnectorIF {
     }
     public void setTransactionId(int id) {
         // Dev.info("Connector.setTransactionId("+id+")");
+        if (id>0) transactionStartMs = System.currentTimeMillis();   // schedule time reference (set on every StartTransaction)
         _set(TRANSACTION_ID, id);
     }
     
@@ -217,8 +222,23 @@ public class Connector extends DataMap implements ConnectorIF {
 
        if (ceiling==chargePointMaxCurrent) return;          // unchanged: avoid re-toggling the charging status every tick
        chargePointMaxCurrent = ceiling;
-       applyChargingCurrent(applyChargePointMax(requestedCurrent));
+       recompute();
 
+    }
+
+    /** Set the EV's desired current (3-phase sum, A); -1 clears it. Delivered = min(this, backend caps). */
+    public void setVehicleCurrent(double amps) {
+       vehicleCurrent = amps;
+       recompute();
+    }
+
+    public double getVehicleCurrent() {
+       return vehicleCurrent;
+    }
+
+    /** What this connector currently wants to draw (A): the EV's desired current if a vehicle is active, else the profile/default. */
+    public double getDemandCurrent() {
+       return vehicleCurrent>=0 ? vehicleCurrent : requestedCurrent;
     }
 
     /** The current this connector wants to draw (A), before any charge-point cap. */
@@ -305,14 +325,16 @@ public class Connector extends DataMap implements ConnectorIF {
     
     // Will be called every seconds
     public void tick() {
-        
+
+        tickSchedule(System.currentTimeMillis());           // advance multi-period charging schedules over time
+
         if (STATUS_CHARGING.equals(getStatus())) {
             double current = getChargingCurrent();
             int voltage = 230;
             double watts = current*voltage;
             setMeterWh(getMeterWh()+watts/3600);
         }
-        
+
     }
     
     
@@ -365,19 +387,55 @@ public class Connector extends DataMap implements ConnectorIF {
 
        // TODO: should be dependant on chargingRateUnit
 
-       JSONObject chargingSchedule = csChargingProfiles.getJSONObject("chargingSchedule");
-       JSONObject chargingSchedulePeriod = chargingSchedule.getJSONArray("chargingSchedulePeriod").getJSONObject(0);
-
-       double current = chargingSchedulePeriod.getDouble("limit");
-       setRequestedCurrent(current);
+       profileStartMs = System.currentTimeMillis();
+       setRequestedCurrent(scheduledLimit(csChargingProfiles, System.currentTimeMillis()));
 
     }
 
-    /** Record the requested current and apply it through the charge-point ceiling. */
+    /** Re-evaluate the active Tx/TxDefault profile against the clock so multi-period schedules advance. */
+    public void tickSchedule(long nowMs) {
+
+       JSONObject profile = (txProfile!=null) ? txProfile : txDefaultProfile;
+       if (profile==null) return;
+
+       double limit = scheduledLimit(profile, nowMs);
+       if (limit!=requestedCurrent) setRequestedCurrent(limit);
+
+    }
+
+    /** The profile's limit (A) for the schedule period in effect at nowMs, relative to the transaction
+     *  start (if a transaction is active) or to when the profile was applied. */
+    private double scheduledLimit(JSONObject profile, long nowMs) {
+
+       long reference = (_getInt(TRANSACTION_ID)>0) ? transactionStartMs : profileStartMs;
+       long elapsedSeconds = (nowMs - reference) / 1000;
+       return ChargingScheduleUtil.activePeriodLimit(profile.getJSONObject("chargingSchedule"), elapsedSeconds);
+
+    }
+
+    /** Record the requested current and resolve the delivered current. */
     private void setRequestedCurrent(double current) {
 
        requestedCurrent = current;
-       applyChargingCurrent(applyChargePointMax(current));
+       recompute();
+
+    }
+
+    /**
+     * Resolve the delivered current. With a vehicle active: min(vehicle want, ChargePointMax cap,
+     * TxProfile limit) and the session owns the status (no auto-flip). Without a vehicle: legacy
+     * behaviour (requestedCurrent clamped by ChargePointMax, with the Charging/SuspendedEVSE flip).
+     */
+    private void recompute() {
+
+       if (vehicleCurrent>=0) {
+           double eff = vehicleCurrent;
+           if (chargePointMaxCurrent>=0 && eff>chargePointMaxCurrent) eff = chargePointMaxCurrent;
+           if ((txProfile!=null || txDefaultProfile!=null) && eff>requestedCurrent) eff = requestedCurrent;
+           setChargingCurrent(eff);
+       } else {
+           applyChargingCurrent(applyChargePointMax(requestedCurrent));
+       }
 
     }
 

@@ -88,6 +88,9 @@ public class DeviceEmulator implements ApplicationModeIF, EventListenerIF {
     public void eventTriggered(EventIF event) {
         
         switch (event.getId()) {
+            case EventIds.METER_VALUES_BEFORE:
+            case EventIds.METER_VALUES_AFTER:
+                break;                                          // hide the duplicate raw MeterValues dumps (10060/10061)
             case EventIds.OCPP_RECEIVED: Dev.info("R: "+event.getMessage()); break;
             case EventIds.OCPP_SENDING:  Dev.info("S: "+event.getMessage()); break;
             case EventIds.INFO:          Dev.info(event.getMessage()); break;
